@@ -1,0 +1,23 @@
+{
+  "name": "heartlink",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HeartLink dating platform built with MongoDB, Express, React, and Node.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "start": "npm --prefix backend start",
+    "check:env": "node backend/src/config/checkEnv.js",
+    "verify:db": "npm --prefix backend run verify:db",
+    "bootstrap:admin": "npm --prefix backend run bootstrap:admin",
+    "test": "npm --prefix backend test && npm --prefix frontend test",
+    "test:backend": "npm --prefix backend test",
+    "test:frontend": "npm --prefix frontend test",
+    "lint": "npm --prefix frontend run lint",
+    "format": "npm --prefix frontend run format"
+  }
+}
