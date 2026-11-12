@@ -9,6 +9,7 @@ import {
   Compass,
   Flag,
   Heart,
+  Info,
   MapPin,
   MessageSquare,
   RotateCcw,
@@ -18,6 +19,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { motion, useMotionValue, useTransform } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import { api, apiErrorMessage, resolvePhotoUrl } from "../services/api";
 import { AppShell } from "../components/Layout";
@@ -129,107 +131,330 @@ export function ReportDialog({ open, user: targetUser, onClose, onSubmitted }) {
   );
 }
 
-function ProfilePhotoGallery({ profile }) {
+function SwipeableDatingCard({
+  profile,
+  nextProfile,
+  onPass,
+  onLike,
+  onSpark,
+  onRewind,
+  acting,
+  onReport,
+  onBlock,
+}) {
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const [showDetails, setShowDetails] = useState(false);
+  const x = useMotionValue(0);
+  const rotate = useTransform(x, [-220, 220], [-16, 16]);
+  const likeOpacity = useTransform(x, [20, 90], [0, 1]);
+  const nopeOpacity = useTransform(x, [-20, -90], [0, 1]);
+
+  useEffect(() => {
+    setPhotoIndex(0);
+    setShowDetails(false);
+  }, [profile?.id, profile?._id]);
+
   const photos = (
     Array.isArray(profile?.photos) && profile.photos.length > 0
       ? profile.photos
       : [profile?.profilePhoto]
   ).filter(Boolean);
-  const [index, setIndex] = useState(0);
 
-  useEffect(() => {
-    setIndex(0);
-  }, [profile?.id, profile?._id]);
+  const currentUrl = photos[photoIndex] ? resolvePhotoUrl(photos[photoIndex]) : "";
+  const nextPhotos = (
+    Array.isArray(nextProfile?.photos) && nextProfile.photos.length > 0
+      ? nextProfile.photos
+      : [nextProfile?.profilePhoto]
+  ).filter(Boolean);
+  const nextUrl = nextPhotos[0] ? resolvePhotoUrl(nextPhotos[0]) : "";
 
-  const currentUrl = photos[index] ? resolvePhotoUrl(photos[index]) : "";
+  const handleDragEnd = (_e, info) => {
+    if (acting) return;
+    if (info.offset.x > 110) {
+      onLike();
+    } else if (info.offset.x < -110) {
+      onPass();
+    }
+  };
+
+  const handlePrevPhoto = (e) => {
+    e.stopPropagation();
+    if (photos.length > 1) {
+      setPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
+    }
+  };
+
+  const handleNextPhoto = (e) => {
+    e.stopPropagation();
+    if (photos.length > 1) {
+      setPhotoIndex((prev) => (prev + 1) % photos.length);
+    }
+  };
 
   return (
-    <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl border border-base-300 bg-base-200 shadow-md">
-      {currentUrl ? (
-        <img
-          src={currentUrl}
-          alt={profile?.name || "Member profile"}
-          className="h-full w-full object-cover"
-        />
-      ) : (
-        <div className="h-full w-full flex flex-col items-center justify-center gap-2 hl-muted-text">
-          <Avatar name={profile?.name} size="2xl" />
-          <span className="text-xs">No profile photos added yet</span>
-        </div>
-      )}
+    <div className="w-full max-w-sm sm:max-w-md mx-auto flex flex-col items-center">
+      {/* Stack Container */}
+      <div className="relative w-full aspect-[3/4] sm:aspect-[4/5] select-none">
+        {/* Next Card in Stack (Peeking Background) */}
+        {nextProfile && (
+          <div className="absolute inset-0 scale-[0.94] translate-y-3.5 rounded-3xl overflow-hidden border border-base-300 bg-base-200 pointer-events-none opacity-50 shadow-md">
+            {nextUrl ? (
+              <img src={nextUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center">
+                <Avatar name={nextProfile.name} size="2xl" />
+              </div>
+            )}
+          </div>
+        )}
 
-      {photos.length > 1 && (
-        <>
-          <div className="absolute top-3 inset-x-3 flex gap-1.5 z-10">
-            {photos.map((_, idx) => (
-              <button
-                key={idx}
-                type="button"
-                aria-label={`View photo ${idx + 1}`}
-                onClick={() => setIndex(idx)}
-                className={`h-1.5 flex-1 rounded-full transition-colors cursor-pointer ${
-                  idx === index ? "bg-white shadow-sm" : "bg-white/40 hover:bg-white/65"
-                }`}
-              />
-            ))}
-          </div>
-          <div className="absolute inset-y-0 left-2 flex items-center">
-            <IconButton
-              label="Previous photo"
-              size="sm"
-              variant="dark"
-              className="bg-slate-950/60 border-white/20 text-white hover:bg-slate-950/85"
-              onClick={() => setIndex((prev) => (prev - 1 + photos.length) % photos.length)}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </IconButton>
-          </div>
-          <div className="absolute inset-y-0 right-2 flex items-center">
-            <IconButton
-              label="Next photo"
-              size="sm"
-              variant="dark"
-              className="bg-slate-950/60 border-white/20 text-white hover:bg-slate-950/85"
-              onClick={() => setIndex((prev) => (prev + 1) % photos.length)}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </IconButton>
-          </div>
-        </>
-      )}
+        {/* Active Draggable Card */}
+        <motion.div
+          style={{ x, rotate }}
+          drag={acting ? false : "x"}
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.65}
+          onDragEnd={handleDragEnd}
+          className="relative h-full w-full rounded-3xl overflow-hidden shadow-2xl border border-rose-500/20 bg-base-100 cursor-grab active:cursor-grabbing"
+        >
+          {/* LIKE Stamp Overlay */}
+          <motion.div
+            style={{ opacity: likeOpacity }}
+            className="absolute top-8 left-6 z-30 pointer-events-none rounded-xl border-4 border-emerald-500 bg-emerald-500/25 px-4 py-1.5 -rotate-12 backdrop-blur-xs shadow-lg"
+          >
+            <span className="text-2xl font-black tracking-wider text-emerald-500 uppercase">LIKE</span>
+          </motion.div>
 
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent p-5 text-white">
-        <div className="flex items-end justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-2xl font-bold tracking-tight">
-                {profile?.name}
-                {profile?.age ? `, ${profile.age}` : ""}
-              </h2>
-              {profile?.isVerified && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-rose-500 to-pink-500 px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-xs">
-                  <ShieldCheck className="h-3 w-3" /> Verified
-                </span>
-              )}
-            </div>
-            <div className="mt-1 flex items-center gap-3 text-xs text-rose-100/90 flex-wrap">
-              {profile?.city && (
-                <span className="inline-flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5" />
-                  {profile.city}
-                </span>
-              )}
-              {profile?.distance && <span>{profile.distance}</span>}
-            </div>
-          </div>
-          {profile?.compatibilityScore && (
-            <div className="rounded-xl bg-white/20 backdrop-blur-md border border-white/25 px-3 py-1.5 text-right shrink-0">
-              <p className="text-[10px] uppercase tracking-wider text-rose-200 font-medium">Chemistry</p>
-              <p className="text-sm font-bold hl-tabular text-white">{profile.compatibilityScore}%</p>
+          {/* NOPE Stamp Overlay */}
+          <motion.div
+            style={{ opacity: nopeOpacity }}
+            className="absolute top-8 right-6 z-30 pointer-events-none rounded-xl border-4 border-rose-500 bg-rose-500/25 px-4 py-1.5 rotate-12 backdrop-blur-xs shadow-lg"
+          >
+            <span className="text-2xl font-black tracking-wider text-rose-500 uppercase">NOPE</span>
+          </motion.div>
+
+          {/* Photo */}
+          {currentUrl ? (
+            <img
+              src={currentUrl}
+              alt={profile?.name || "Profile"}
+              className="h-full w-full object-cover pointer-events-none"
+            />
+          ) : (
+            <div className="h-full w-full flex flex-col items-center justify-center gap-2 hl-muted-text">
+              <Avatar name={profile?.name} size="2xl" />
+              <span className="text-xs">No profile photos added</span>
             </div>
           )}
-        </div>
+
+          {/* Instagram-style Photo Segment Bars */}
+          {photos.length > 1 && (
+            <div className="absolute top-3.5 inset-x-4 flex gap-1.5 z-20 pointer-events-none">
+              {photos.map((_, idx) => (
+                <div
+                  key={idx}
+                  className={`h-1 flex-1 rounded-full transition-all duration-200 ${
+                    idx === photoIndex ? "bg-white shadow-sm" : "bg-white/40"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Tap Zones for Next / Prev Photo */}
+          <div
+            className="absolute inset-y-0 left-0 w-2/5 z-10 cursor-pointer"
+            onClick={handlePrevPhoto}
+            aria-label="Previous photo"
+          />
+          <div
+            className="absolute inset-y-0 right-0 w-2/5 z-10 cursor-pointer"
+            onClick={handleNextPhoto}
+            aria-label="Next photo"
+          />
+
+          {/* Bottom Card Overlay */}
+          <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-slate-950/95 via-slate-950/50 to-transparent p-5 text-white pointer-events-none">
+            <div className="flex items-end justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white drop-shadow-sm truncate">
+                    {profile?.name}
+                    {profile?.age ? `, ${profile.age}` : ""}
+                  </h2>
+                  {profile?.isVerified && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-rose-500 to-pink-500 px-2 py-0.5 text-[11px] font-semibold text-white shadow-xs shrink-0">
+                      <ShieldCheck className="h-3 w-3" /> Verified
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-1 flex items-center gap-3 text-xs text-rose-100/90 flex-wrap">
+                  {profile?.city && (
+                    <span className="inline-flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {profile.city}
+                    </span>
+                  )}
+                  {profile?.distance && <span>{profile.distance}</span>}
+                  {profile?.lookingFor && (
+                    <span className="capitalize bg-white/15 px-2 py-0.5 rounded-md text-[11px] backdrop-blur-xs">
+                      {profile.lookingFor}
+                    </span>
+                  )}
+                </div>
+
+                {profile?.bio && (
+                  <p className="mt-2 text-xs text-slate-200 line-clamp-2 leading-relaxed">
+                    {profile.bio}
+                  </p>
+                )}
+              </div>
+
+              {profile?.compatibilityScore && (
+                <div className="rounded-2xl bg-white/20 backdrop-blur-md border border-white/25 px-3 py-1.5 text-right shrink-0">
+                  <p className="text-[10px] uppercase tracking-wider text-rose-200 font-semibold">Match</p>
+                  <p className="text-sm font-bold hl-tabular text-white">{profile.compatibilityScore}%</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
       </div>
+
+      {/* Floating Circular Action Controls */}
+      <div className="flex items-center justify-center gap-3.5 sm:gap-4 py-5 w-full">
+        {/* Rewind */}
+        <button
+          type="button"
+          onClick={onRewind}
+          disabled={acting}
+          aria-label="Rewind last pass"
+          className="flex h-12 w-12 items-center justify-center rounded-full border border-amber-400/30 bg-base-100 text-amber-500 shadow-md hover:scale-110 active:scale-90 hover:bg-amber-500/10 transition-transform cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <RotateCcw className="h-5 w-5" strokeWidth={2} />
+        </button>
+
+        {/* Pass (✕) */}
+        <button
+          type="button"
+          onClick={onPass}
+          disabled={acting}
+          aria-label="Pass profile"
+          className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-rose-500/25 bg-base-100 text-rose-500 shadow-xl hover:scale-110 active:scale-90 hover:bg-rose-500/10 transition-transform cursor-pointer disabled:opacity-40"
+        >
+          <X className="h-8 w-8 text-rose-500" strokeWidth={2.75} />
+        </button>
+
+        {/* Superlike / Spark (★) */}
+        <button
+          type="button"
+          onClick={onSpark}
+          disabled={acting}
+          aria-label="Send Spark note"
+          className="flex h-12 w-12 items-center justify-center rounded-full border border-sky-400/30 bg-base-100 text-sky-500 shadow-md hover:scale-110 active:scale-90 hover:bg-sky-500/10 transition-transform cursor-pointer disabled:opacity-40"
+        >
+          <Sparkles className="h-5 w-5" strokeWidth={2} />
+        </button>
+
+        {/* Like (♥) */}
+        <button
+          type="button"
+          onClick={onLike}
+          disabled={acting}
+          aria-label="Like profile"
+          className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-tr from-rose-500 via-pink-500 to-rose-600 text-white shadow-2xl hover:scale-110 active:scale-90 shadow-rose-500/35 transition-transform cursor-pointer disabled:opacity-40"
+        >
+          <Heart className="h-8 w-8 fill-white text-white" strokeWidth={2} />
+        </button>
+
+        {/* Info Toggle */}
+        <button
+          type="button"
+          onClick={() => setShowDetails(!showDetails)}
+          aria-label="Toggle profile details"
+          className={`flex h-12 w-12 items-center justify-center rounded-full border border-base-300 bg-base-100 shadow-md hover:scale-110 active:scale-90 transition-transform cursor-pointer ${
+            showDetails ? "text-primary border-primary/40 bg-primary/10" : "text-base-content/70 hover:text-base-content"
+          }`}
+        >
+          <Info className="h-5 w-5" strokeWidth={2} />
+        </button>
+      </div>
+
+      {/* Expandable Hinge-style Profile Details */}
+      {showDetails && (
+        <div className="w-full space-y-4 pt-2">
+          {/* Prompts Cards */}
+          {profile.prompts?.length > 0 && (
+            <div className="space-y-3">
+              {profile.prompts.map((prompt, idx) => (
+                <div key={idx} className="rounded-2xl border border-rose-500/15 bg-base-100 p-4 shadow-sm space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-rose-500">{prompt.question}</p>
+                  <p className="text-sm font-medium text-base-content leading-relaxed">{prompt.answer}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Interests Chips */}
+          {profile.interests?.length > 0 && (
+            <div className="rounded-2xl border hl-subtle-divider bg-base-100 p-4 shadow-sm space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wider hl-muted-text">Passions &amp; Interests</h3>
+              <div className="flex flex-wrap gap-2">
+                {profile.interests.map((tag) => {
+                  const isMutual = profile.mutualInterests?.includes(tag);
+                  return (
+                    <Badge key={tag} tone={isMutual ? "primary" : "neutral"} className="rounded-lg py-1 px-2.5 text-xs">
+                      {isMutual && <Check className="h-3 w-3" />}
+                      {tag}
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Lifestyle Grid */}
+          {profile.lifestyle && Object.values(profile.lifestyle).some(Boolean) && (
+            <div className="rounded-2xl border hl-subtle-divider bg-base-100 p-4 shadow-sm space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wider hl-muted-text">Lifestyle</h3>
+              <dl className="grid grid-cols-2 gap-2 text-xs">
+                {Object.entries(profile.lifestyle)
+                  .filter(([, val]) => Boolean(val))
+                  .map(([key, val]) => (
+                    <div key={key} className="rounded-xl border hl-subtle-divider bg-base-200/50 px-3 py-2">
+                      <dt className="capitalize hl-muted-text">{key}</dt>
+                      <dd className="font-semibold text-base-content mt-0.5">{val}</dd>
+                    </div>
+                  ))}
+              </dl>
+            </div>
+          )}
+
+          {/* Safety Actions */}
+          <div className="flex items-center justify-between pt-2 px-2 text-xs">
+            <Link to={`/profile/${profile.id}`} className="font-semibold hl-accent-text hover:underline">
+              View Full Profile →
+            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onReport(profile)}
+                className="text-xs hl-muted-text hover:text-error transition-colors cursor-pointer inline-flex items-center gap-1"
+              >
+                <Flag className="h-3.5 w-3.5" /> Report
+              </button>
+              <button
+                type="button"
+                onClick={onBlock}
+                className="text-xs hl-muted-text hover:text-error transition-colors cursor-pointer inline-flex items-center gap-1"
+              >
+                <Ban className="h-3.5 w-3.5" /> Block
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -439,151 +664,17 @@ export function DiscoverPage() {
             />
           </Card>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Visual Card + Primary Controls */}
-            <div className="lg:col-span-5 space-y-4">
-              <ProfilePhotoGallery profile={currentProfile} />
-              <Card noPadding className="p-3.5 shadow-md border-rose-500/15">
-                <div className="grid grid-cols-3 gap-2.5">
-                  <Button
-                    variant="outline"
-                    size="md"
-                    disabled={acting}
-                    onClick={handlePass}
-                    className="hover:border-rose-300 hover:text-rose-600 dark:hover:text-rose-400 font-semibold"
-                    leftIcon={<X className="h-4 w-4 text-rose-500" strokeWidth={2.5} />}
-                  >
-                    Pass
-                  </Button>
-                  <Button
-                    variant="soft-primary"
-                    size="md"
-                    disabled={acting}
-                    onClick={() => setNoteOpen(true)}
-                    className="font-semibold"
-                    leftIcon={<Sparkles className="h-4 w-4 text-amber-500" />}
-                  >
-                    Spark
-                  </Button>
-                  <Button
-                    variant="primary"
-                    size="md"
-                    loading={acting}
-                    onClick={() => handleLike("like")}
-                    className="font-bold shadow-md"
-                    leftIcon={<Heart className="h-4 w-4 fill-white text-white" />}
-                  >
-                    Like
-                  </Button>
-                </div>
-              </Card>
-            </div>
-
-            {/* Profile Detail Card */}
-            <div className="lg:col-span-7 space-y-4">
-              <Card
-                header={
-                  <>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge tone="primary" className="capitalize">
-                        Looking for {currentProfile.lookingFor || "relationship"}
-                      </Badge>
-                      {currentProfile.mutualInterests?.length > 0 && (
-                        <Badge tone="success">
-                          {currentProfile.mutualInterests.length} shared interest
-                          {currentProfile.mutualInterests.length === 1 ? "" : "s"}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Link to={`/profile/${currentProfile.id}`}>
-                        <Button size="xs" variant="ghost">Full Profile</Button>
-                      </Link>
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        onClick={() => setReportTarget(currentProfile)}
-                        leftIcon={<Flag className="h-3.5 w-3.5" />}
-                      >
-                        Report
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        onClick={handleBlock}
-                        leftIcon={<Ban className="h-3.5 w-3.5" />}
-                      >
-                        Block
-                      </Button>
-                    </div>
-                  </>
-                }
-              >
-                <div className="space-y-5">
-                  <div>
-                    <h3 className="text-xs font-semibold uppercase tracking-wider hl-muted-text mb-1.5">
-                      About {currentProfile.name}
-                    </h3>
-                    <p className="text-sm text-base-content leading-relaxed">
-                      {currentProfile.bio || "No bio shared yet."}
-                    </p>
-                  </div>
-
-                  {currentProfile.interests?.length > 0 && (
-                    <div>
-                      <h3 className="text-xs font-semibold uppercase tracking-wider hl-muted-text mb-2">
-                        Interests
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {currentProfile.interests.map((tag) => {
-                          const isMutual = currentProfile.mutualInterests?.includes(tag);
-                          return (
-                            <Badge key={tag} tone={isMutual ? "primary" : "neutral"}>
-                              {isMutual && <Check className="h-3 w-3" />}
-                              {tag}
-                            </Badge>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {currentProfile.prompts?.length > 0 && (
-                    <div className="space-y-2.5">
-                      <h3 className="text-xs font-semibold uppercase tracking-wider hl-muted-text">
-                        Prompts
-                      </h3>
-                      {currentProfile.prompts.map((prompt, idx) => (
-                        <div key={idx} className="rounded-lg border hl-subtle-divider bg-base-200/50 p-3.5">
-                          <p className="text-xs font-medium hl-accent-text">{prompt.question}</p>
-                          <p className="text-sm text-base-content mt-1">{prompt.answer}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {currentProfile.lifestyle &&
-                    Object.values(currentProfile.lifestyle).some(Boolean) && (
-                      <div>
-                        <h3 className="text-xs font-semibold uppercase tracking-wider hl-muted-text mb-2">
-                          Lifestyle
-                        </h3>
-                        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
-                          {Object.entries(currentProfile.lifestyle)
-                            .filter(([, val]) => Boolean(val))
-                            .map(([key, val]) => (
-                              <div key={key} className="rounded-lg border hl-subtle-divider bg-base-200/40 px-3 py-2">
-                                <dt className="capitalize hl-muted-text">{key}</dt>
-                                <dd className="font-medium text-base-content mt-0.5">{val}</dd>
-                              </div>
-                            ))}
-                        </dl>
-                      </div>
-                    )}
-                </div>
-              </Card>
-            </div>
-          </div>
+          <SwipeableDatingCard
+            profile={currentProfile}
+            nextProfile={profiles[1] || null}
+            onPass={handlePass}
+            onLike={() => handleLike("like")}
+            onSpark={() => setNoteOpen(true)}
+            onRewind={handleRewind}
+            acting={acting}
+            onReport={(target) => setReportTarget(target)}
+            onBlock={handleBlock}
+          />
         )}
       </PageTransition>
 
@@ -678,6 +769,111 @@ export function DiscoverPage() {
         onClose={() => setReportTarget(null)}
       />
     </AppShell>
+  );
+}
+
+function ProfilePhotoGallery({ profile }) {
+  const photos = (
+    Array.isArray(profile?.photos) && profile.photos.length > 0
+      ? profile.photos
+      : [profile?.profilePhoto]
+  ).filter(Boolean);
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    setIndex(0);
+  }, [profile?.id, profile?._id]);
+
+  const currentUrl = photos[index] ? resolvePhotoUrl(photos[index]) : "";
+
+  return (
+    <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl border border-base-300 bg-base-200 shadow-md">
+      {currentUrl ? (
+        <img
+          src={currentUrl}
+          alt={profile?.name || "Member profile"}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="h-full w-full flex flex-col items-center justify-center gap-2 hl-muted-text">
+          <Avatar name={profile?.name} size="2xl" />
+          <span className="text-xs">No profile photos added yet</span>
+        </div>
+      )}
+
+      {photos.length > 1 && (
+        <>
+          <div className="absolute top-3 inset-x-3 flex gap-1.5 z-10">
+            {photos.map((_, idx) => (
+              <button
+                key={idx}
+                type="button"
+                aria-label={`View photo ${idx + 1}`}
+                onClick={() => setIndex(idx)}
+                className={`h-1.5 flex-1 rounded-full transition-colors cursor-pointer ${
+                  idx === index ? "bg-white shadow-sm" : "bg-white/40 hover:bg-white/65"
+                }`}
+              />
+            ))}
+          </div>
+          <div className="absolute inset-y-0 left-2 flex items-center">
+            <IconButton
+              label="Previous photo"
+              size="sm"
+              variant="dark"
+              className="bg-slate-950/60 border-white/20 text-white hover:bg-slate-950/85"
+              onClick={() => setIndex((prev) => (prev - 1 + photos.length) % photos.length)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </IconButton>
+          </div>
+          <div className="absolute inset-y-0 right-2 flex items-center">
+            <IconButton
+              label="Next photo"
+              size="sm"
+              variant="dark"
+              className="bg-slate-950/60 border-white/20 text-white hover:bg-slate-950/85"
+              onClick={() => setIndex((prev) => (prev + 1) % photos.length)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </IconButton>
+          </div>
+        </>
+      )}
+
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent p-5 text-white">
+        <div className="flex items-end justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-2xl font-bold tracking-tight">
+                {profile?.name}
+                {profile?.age ? `, ${profile.age}` : ""}
+              </h2>
+              {profile?.isVerified && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-rose-500 to-pink-500 px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-xs">
+                  <ShieldCheck className="h-3 w-3" /> Verified
+                </span>
+              )}
+            </div>
+            <div className="mt-1 flex items-center gap-3 text-xs text-rose-100/90 flex-wrap">
+              {profile?.city && (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {profile.city}
+                </span>
+              )}
+              {profile?.distance && <span>{profile.distance}</span>}
+            </div>
+          </div>
+          {profile?.compatibilityScore && (
+            <div className="rounded-xl bg-white/20 backdrop-blur-md border border-white/25 px-3 py-1.5 text-right shrink-0">
+              <p className="text-[10px] uppercase tracking-wider text-rose-200 font-medium">Chemistry</p>
+              <p className="text-sm font-bold hl-tabular text-white">{profile.compatibilityScore}%</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
