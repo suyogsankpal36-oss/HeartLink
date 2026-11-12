@@ -191,9 +191,7 @@ export function AdminLogin() {
     <div className="min-h-dvh flex flex-col justify-center bg-base-200 px-4 py-12">
       <div className="mx-auto w-full max-w-md space-y-6">
         <div className="flex items-center justify-between">
-          <Link to="/" className="no-underline">
-            <Logo badge="Console" />
-          </Link>
+          <Logo badge="Console" />
           <ThemeToggle compact />
         </div>
 
@@ -381,9 +379,11 @@ export function AdminLayout({ children = null }) {
         }`}
       >
         <div className={`h-16 flex items-center border-b hl-subtle-divider px-4 ${collapsed ? "justify-center" : "justify-between"}`}>
-          <Link to={hasMinRole(role, "admin") ? "/admin/dashboard" : "/admin/moderation"} className="no-underline">
-            <Logo compact={collapsed} badge={role === "superadmin" ? "Root" : role === "moderator" ? "Mod" : "Admin"} />
-          </Link>
+          <Logo
+            to={hasMinRole(role, "admin") ? "/admin/dashboard" : "/admin/moderation"}
+            compact={collapsed}
+            badge={role === "superadmin" ? "Root" : role === "moderator" ? "Mod" : "Admin"}
+          />
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 py-3">

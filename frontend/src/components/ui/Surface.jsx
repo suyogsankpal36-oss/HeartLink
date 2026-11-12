@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import { Check, ChevronRight, Heart } from "lucide-react";
 import { resolvePhotoUrl } from "../../services/api";
 
-export function Logo({ badge = "", compact = false, className = "", light = false }) {
-  return (
-    <Link to="/" aria-label="HeartLink home" className={`inline-flex items-center gap-2.5 select-none no-underline ${light ? "text-white" : ""} ${className}`}>
+export function Logo({ to = "/", badge = "", compact = false, className = "", light = false, asDiv = false }) {
+  const content = (
+    <>
       <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 via-pink-500 to-rose-600 text-white shadow-sm shrink-0">
         <Heart className="h-4 w-4 fill-white text-white" strokeWidth={1.75} />
       </span>
@@ -19,6 +19,18 @@ export function Logo({ badge = "", compact = false, className = "", light = fals
           )}
         </span>
       )}
+    </>
+  );
+
+  const classes = `inline-flex items-center gap-2.5 select-none no-underline ${light ? "text-white" : ""} ${className}`;
+
+  if (asDiv || !to) {
+    return <div className={classes}>{content}</div>;
+  }
+
+  return (
+    <Link to={to} aria-label="HeartLink home" className={classes}>
+      {content}
     </Link>
   );
 }

@@ -509,9 +509,7 @@ export function AuthPage({ mode = "login" }) {
           className="pointer-events-none absolute -top-24 -left-24 h-80 w-80 rounded-full bg-rose-500/20 blur-3xl"
         />
         <div className="relative z-10 flex items-center justify-between">
-          <Link to="/" className="no-underline text-white">
-            <Logo />
-          </Link>
+          <Logo light />
           <Link to="/" className="text-xs text-rose-300 hover:text-white transition-colors">
             ← Back to Home
           </Link>
@@ -559,9 +557,7 @@ export function AuthPage({ mode = "login" }) {
       <main className="lg:col-span-7 flex flex-col justify-center px-4 py-8 sm:px-8 lg:px-14">
         <div className="mx-auto w-full max-w-md space-y-6">
           <div className="flex items-center justify-between lg:hidden pb-2 border-b hl-subtle-divider">
-            <Link to="/" className="no-underline">
-              <Logo />
-            </Link>
+            <Logo />
             <Link to="/" className="text-xs hl-muted-text hover:text-base-content">
               Home
             </Link>

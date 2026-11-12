@@ -72,9 +72,7 @@ export function PublicHeader() {
   return (
     <header className="sticky top-0 z-40 border-b hl-subtle-divider bg-base-100/85 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <Link to="/" className="no-underline shrink-0">
-          <Logo />
-        </Link>
+        <Logo className="shrink-0" />
 
         <nav aria-label="Primary" className="hidden md:flex items-center gap-1">
           {navLinks.map((item) => (
@@ -561,9 +559,7 @@ export function AppShell({ title = "", subtitle = "", actions = null, fullHeight
         }`}
       >
         <div className={`h-16 flex items-center border-b hl-subtle-divider px-4 ${collapsed ? "justify-center" : "justify-between"}`}>
-          <Link to="/dashboard" className="no-underline">
-            <Logo compact={collapsed} />
-          </Link>
+          <Logo to="/dashboard" compact={collapsed} />
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
