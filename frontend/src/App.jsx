@@ -14,6 +14,10 @@ const LegalPage = lazy(() => import("./pages/PublicPages.jsx").then((pages) => (
 const NotFoundPage = lazy(() => import("./pages/PublicPages.jsx").then((pages) => ({ default: pages.NotFoundPage })));
 const ResetPasswordPage = lazy(() => import("./pages/PublicPages.jsx").then((pages) => ({ default: pages.ResetPasswordPage })));
 const VerifyEmailPage = lazy(() => import("./pages/PublicPages.jsx").then((pages) => ({ default: pages.VerifyEmailPage })));
+
+const MemberDashboardPage = lazy(() =>
+  import("./pages/MemberDashboardPage.jsx").then((pages) => ({ default: pages.MemberDashboardPage }))
+);
 const DiscoverPage = lazy(() => import("./pages/DiscoveryPages.jsx").then((pages) => ({ default: pages.DiscoverPage })));
 const LikesPage = lazy(() => import("./pages/DiscoveryPages.jsx").then((pages) => ({ default: pages.LikesPage })));
 const MatchesPage = lazy(() => import("./pages/DiscoveryPages.jsx").then((pages) => ({ default: pages.MatchesPage })));
@@ -22,30 +26,36 @@ const EditProfilePage = lazy(() => import("./pages/AccountPages.jsx").then((page
 const FiltersPage = lazy(() => import("./pages/AccountPages.jsx").then((pages) => ({ default: pages.FiltersPage })));
 const NotificationsPage = lazy(() => import("./pages/AccountPages.jsx").then((pages) => ({ default: pages.NotificationsPage })));
 const PremiumPage = lazy(() => import("./pages/AccountPages.jsx").then((pages) => ({ default: pages.PremiumPage })));
-const ReportQueuePage = lazy(() => import("./pages/AccountPages.jsx").then((pages) => ({ default: pages.ReportQueuePage })));
 const SettingsPage = lazy(() => import("./pages/AccountPages.jsx").then((pages) => ({ default: pages.SettingsPage })));
-const SupportQueuePage = lazy(() => import("./pages/AccountPages.jsx").then((pages) => ({ default: pages.SupportQueuePage })));
 const MessagesPage = lazy(() => import("./pages/MessagesPage.jsx").then((pages) => ({ default: pages.MessagesPage })));
 
-// Admin lazy imports
-const AdminLogin = lazy(() => import("./pages/admin/AdminPages.jsx").then((m) => ({ default: m.AdminLogin })));
-const AdminLayout = lazy(() => import("./pages/admin/AdminPages.jsx").then((m) => ({ default: m.AdminLayout })));
-const ProtectedAdminRoute = lazy(() => import("./pages/admin/AdminPages.jsx").then((m) => ({ default: m.ProtectedAdminRoute })));
-const RequireAdminRoles = lazy(() => import("./pages/admin/AdminPages.jsx").then((m) => ({ default: m.RequireAdminRoles })));
-const AdminIndexRedirect = lazy(() => import("./pages/admin/AdminPages.jsx").then((m) => ({ default: m.AdminIndexRedirect })));
-const AdminDashboard = lazy(() => import("./pages/admin/AdminPages.jsx").then((m) => ({ default: m.AdminDashboard })));
-const UserManagement = lazy(() => import("./pages/admin/AdminPages.jsx").then((m) => ({ default: m.UserManagement })));
-const UserDetails = lazy(() => import("./pages/admin/AdminPages.jsx").then((m) => ({ default: m.UserDetails })));
-const ActivityMonitoring = lazy(() => import("./pages/admin/AdminPages.jsx").then((m) => ({ default: m.ActivityMonitoring })));
-const Analytics = lazy(() => import("./pages/admin/AdminPages.jsx").then((m) => ({ default: m.Analytics })));
-const SecurityCenter = lazy(() => import("./pages/admin/AdminPages.jsx").then((m) => ({ default: m.SecurityCenter })));
-const AuditLogs = lazy(() => import("./pages/admin/AdminPages.jsx").then((m) => ({ default: m.AuditLogs })));
-const DatabaseMonitor = lazy(() => import("./pages/admin/AdminPages.jsx").then((m) => ({ default: m.DatabaseMonitor })));
-const SystemHealth = lazy(() => import("./pages/admin/AdminPages.jsx").then((m) => ({ default: m.SystemHealth })));
-const AdminNotifications = lazy(() => import("./pages/admin/AdminPages.jsx").then((m) => ({ default: m.AdminNotifications })));
-const RoleManagement = lazy(() => import("./pages/admin/AdminPages.jsx").then((m) => ({ default: m.RoleManagement })));
-const AdminSettings = lazy(() => import("./pages/admin/AdminPages.jsx").then((m) => ({ default: m.AdminSettings })));
+// Admin & Moderation console lazy imports (directly by chunk so charts only load on dashboard/analytics)
+const RequireAdmin = lazy(() => import("./pages/admin/AdminLayout.jsx").then((m) => ({ default: m.RequireAdmin })));
+const AdminLogin = lazy(() => import("./pages/admin/AdminLayout.jsx").then((m) => ({ default: m.AdminLogin })));
+const AdminLayout = lazy(() => import("./pages/admin/AdminLayout.jsx").then((m) => ({ default: m.AdminLayout })));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard.jsx").then((m) => ({ default: m.AdminDashboard })));
+const UserManagement = lazy(() => import("./pages/admin/UserManagement.jsx").then((m) => ({ default: m.UserManagement })));
+const UserDetails = lazy(() => import("./pages/admin/UserManagement.jsx").then((m) => ({ default: m.UserDetails })));
+const Analytics = lazy(() => import("./pages/admin/AnalyticsPage.jsx").then((m) => ({ default: m.Analytics })));
+const RoleManagement = lazy(() => import("./pages/admin/MonitoringPages.jsx").then((m) => ({ default: m.RoleManagement })));
+const ActivityMonitoring = lazy(() => import("./pages/admin/MonitoringPages.jsx").then((m) => ({ default: m.ActivityMonitoring })));
+const SecurityCenter = lazy(() => import("./pages/admin/MonitoringPages.jsx").then((m) => ({ default: m.SecurityCenter })));
+const AdminAuditLogs = lazy(() => import("./pages/admin/MonitoringPages.jsx").then((m) => ({ default: m.AdminAuditLogs })));
+const DatabaseMonitoring = lazy(() => import("./pages/admin/MonitoringPages.jsx").then((m) => ({ default: m.DatabaseMonitoring })));
+const SystemHealth = lazy(() => import("./pages/admin/MonitoringPages.jsx").then((m) => ({ default: m.SystemHealth })));
+const AdminNotifications = lazy(() => import("./pages/admin/MonitoringPages.jsx").then((m) => ({ default: m.AdminNotifications })));
+const AdminSettings = lazy(() => import("./pages/admin/MonitoringPages.jsx").then((m) => ({ default: m.AdminSettings })));
+const ModeratorDashboardPage = lazy(() => import("./pages/admin/ModerationPages.jsx").then((m) => ({ default: m.ModeratorDashboardPage })));
+const ReportQueuePage = lazy(() => import("./pages/admin/ModerationPages.jsx").then((m) => ({ default: m.ReportQueuePage })));
+const SupportQueuePage = lazy(() => import("./pages/admin/ModerationPages.jsx").then((m) => ({ default: m.SupportQueuePage })));
 
+function FullPageLoader({ label = "Opening HeartLink" }) {
+  return (
+    <div className="min-h-dvh flex items-center justify-center bg-base-200">
+      <PageSpinner label={label} />
+    </div>
+  );
+}
 
 function ScrollManager() {
   const { pathname, hash } = useLocation();
@@ -63,25 +73,31 @@ function MemberRoute({ children }) {
   return <RequireMember>{children}</RequireMember>;
 }
 
-function StaffRoute({ children }) {
-  const { user, authLoading } = useAuth();
-  if (authLoading) return <PageSpinner label="Checking staff access" />;
-  if (!user) return <Navigate to="/login" replace />;
-  if (!["superadmin", "admin", "moderator"].includes(user.role)) return <Navigate to="/discover" replace />;
-  return <MemberRoute>{children}</MemberRoute>;
-}
-
 function AuthRedirect({ mode }) {
   const { user, authLoading } = useAuth();
-  if (authLoading) return <PageSpinner label="Getting HeartLink ready" />;
-  if (user) return <Navigate to="/discover" replace />;
+  if (authLoading) return <FullPageLoader label="Getting HeartLink ready" />;
+  if (user) return <Navigate to="/dashboard" replace />;
   return <AuthPage mode={mode} />;
 }
 
 function HelpRoute() {
   const { user, authLoading } = useAuth();
-  if (authLoading) return <PageSpinner label="Getting HeartLink ready" />;
-  return user ? <RequireMember><HelpPage /></RequireMember> : <HelpPage />;
+  if (authLoading) return <FullPageLoader label="Getting HeartLink ready" />;
+  return user ? (
+    <RequireMember>
+      <HelpPage />
+    </RequireMember>
+  ) : (
+    <HelpPage />
+  );
+}
+
+function AdminIndexRedirect() {
+  const { user } = useAuth();
+  if (user?.role === "moderator") {
+    return <Navigate to="/admin/moderation" replace />;
+  }
+  return <Navigate to="/admin/dashboard" replace />;
 }
 
 function LegacyChatRedirect() {
@@ -93,8 +109,9 @@ function App() {
   return (
     <>
       <ScrollManager />
-      <Suspense fallback={<PageSpinner label="Opening HeartLink" />}>
+      <Suspense fallback={<FullPageLoader label="Opening HeartLink" />}>
         <Routes>
+          {/* Public */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/signup" element={<AuthRedirect mode="signup" />} />
           <Route path="/register" element={<Navigate to="/signup" replace />} />
@@ -111,6 +128,8 @@ function App() {
           <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
           <Route path="/help" element={<HelpRoute />} />
 
+          {/* Member workspace */}
+          <Route path="/dashboard" element={<MemberRoute><MemberDashboardPage /></MemberRoute>} />
           <Route path="/discover" element={<MemberRoute><DiscoverPage /></MemberRoute>} />
           <Route path="/profile/edit" element={<MemberRoute><EditProfilePage /></MemberRoute>} />
           <Route path="/edit-profile" element={<Navigate to="/profile/edit" replace />} />
@@ -125,27 +144,99 @@ function App() {
           <Route path="/search" element={<MemberRoute><FiltersPage /></MemberRoute>} />
           <Route path="/filters" element={<Navigate to="/search" replace />} />
           <Route path="/notifications" element={<MemberRoute><NotificationsPage /></MemberRoute>} />
-          <Route path="/admin/support" element={<StaffRoute><SupportQueuePage /></StaffRoute>} />
-          <Route path="/admin/reports" element={<StaffRoute><ReportQueuePage /></StaffRoute>} />
 
-          {/* ── Admin Panel ── */}
+          {/* Enterprise Admin / Moderation Console */}
           <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin" element={<ProtectedAdminRoute />}>
-            <Route element={<AdminLayout />}>
-              <Route path="dashboard" element={<RequireAdminRoles roles={["admin", "superadmin"]}><AdminDashboard /></RequireAdminRoles>} />
-              <Route path="users" element={<RequireAdminRoles roles={["admin", "superadmin"]}><UserManagement /></RequireAdminRoles>} />
-              <Route path="users/:id" element={<UserDetails />} />
-              <Route path="roles" element={<RequireAdminRoles roles={["superadmin"]}><RoleManagement /></RequireAdminRoles>} />
-              <Route path="activity" element={<RequireAdminRoles roles={["admin", "superadmin"]}><ActivityMonitoring /></RequireAdminRoles>} />
-              <Route path="analytics" element={<RequireAdminRoles roles={["admin", "superadmin"]}><Analytics /></RequireAdminRoles>} />
-              <Route path="security" element={<RequireAdminRoles roles={["admin", "superadmin"]}><SecurityCenter /></RequireAdminRoles>} />
-              <Route path="audit-logs" element={<RequireAdminRoles roles={["admin", "superadmin"]}><AuditLogs /></RequireAdminRoles>} />
-              <Route path="database" element={<RequireAdminRoles roles={["superadmin"]}><DatabaseMonitor /></RequireAdminRoles>} />
-              <Route path="system" element={<RequireAdminRoles roles={["admin", "superadmin"]}><SystemHealth /></RequireAdminRoles>} />
-              <Route path="notifications" element={<AdminNotifications />} />
-              <Route path="settings" element={<RequireAdminRoles roles={["admin", "superadmin"]}><AdminSettings /></RequireAdminRoles>} />
-              <Route index element={<AdminIndexRedirect />} />
-            </Route>
+          <Route
+            path="/admin"
+            element={
+              <RequireAdmin minRole="moderator">
+                <AdminLayout />
+              </RequireAdmin>
+            }
+          >
+            <Route index element={<AdminIndexRedirect />} />
+            <Route path="moderation" element={<ModeratorDashboardPage />} />
+            <Route path="reports" element={<ReportQueuePage />} />
+            <Route path="support" element={<SupportQueuePage />} />
+            <Route path="notifications" element={<AdminNotifications />} />
+            <Route path="settings" element={<AdminSettings />} />
+            <Route path="users/:id" element={<UserDetails />} />
+
+            <Route
+              path="dashboard"
+              element={
+                <RequireAdmin minRole="admin">
+                  <AdminDashboard />
+                </RequireAdmin>
+              }
+            />
+            <Route
+              path="users"
+              element={
+                <RequireAdmin minRole="admin">
+                  <UserManagement />
+                </RequireAdmin>
+              }
+            />
+            <Route
+              path="activity"
+              element={
+                <RequireAdmin minRole="admin">
+                  <ActivityMonitoring />
+                </RequireAdmin>
+              }
+            />
+            <Route
+              path="analytics"
+              element={
+                <RequireAdmin minRole="admin">
+                  <Analytics />
+                </RequireAdmin>
+              }
+            />
+            <Route
+              path="security"
+              element={
+                <RequireAdmin minRole="admin">
+                  <SecurityCenter />
+                </RequireAdmin>
+              }
+            />
+            <Route
+              path="audit-logs"
+              element={
+                <RequireAdmin minRole="admin">
+                  <AdminAuditLogs />
+                </RequireAdmin>
+              }
+            />
+            <Route
+              path="system"
+              element={
+                <RequireAdmin minRole="admin">
+                  <SystemHealth />
+                </RequireAdmin>
+              }
+            />
+
+            <Route
+              path="roles"
+              element={
+                <RequireAdmin minRole="superadmin">
+                  <RoleManagement />
+                </RequireAdmin>
+              }
+            />
+            <Route
+              path="database"
+              element={
+                <RequireAdmin minRole="superadmin">
+                  <DatabaseMonitoring />
+                </RequireAdmin>
+              }
+            />
+            <Route path="*" element={<AdminIndexRedirect />} />
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />

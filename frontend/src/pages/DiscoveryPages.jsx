@@ -1,249 +1,1205 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { toast } from "react-hot-toast";
-import { api, resolvePhotoUrl } from "../services/api.js";
-import { useRemote } from "../hooks/useRemote.js";
-import { Avatar, Button, ConfirmDialog, EmptyState, ErrorNotice, Icon, PageHeading, PageSpinner } from "../components/ui.jsx";
+import toast from "react-hot-toast";
+import {
+  Ban,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Compass,
+  Flag,
+  Heart,
+  MapPin,
+  MessageSquare,
+  RotateCcw,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  Users,
+  X,
+} from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { api, apiErrorMessage, resolvePhotoUrl } from "../services/api";
+import { AppShell } from "../components/Layout";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  ConfirmDialog,
+  EmptyState,
+  ErrorNotice,
+  IconButton,
+  Modal,
+  PageSpinner,
+  PageTransition,
+  SearchBar,
+  Select,
+  TextArea,
+} from "../components/ui";
 
-function displayDate(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(date);
+const REPORT_REASONS = [
+  { value: "harassment", label: "Harassment or abusive behavior" },
+  { value: "fake_profile", label: "Fake profile or impersonation" },
+  { value: "spam_or_scam", label: "Spam, solicitation, or scam" },
+  { value: "inappropriate_photos", label: "Inappropriate photos or content" },
+  { value: "underage", label: "Appears under 18 years old" },
+  { value: "other", label: "Other safety concern" },
+];
+
+export function ReportDialog({ open, user: targetUser, onClose, onSubmitted }) {
+  const [reason, setReason] = useState("harassment");
+  const [details, setDetails] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      setReason("harassment");
+      setDetails("");
+      setError("");
+    }
+  }, [open, targetUser?.id]);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!targetUser) return;
+    setBusy(true);
+    setError("");
+    try {
+      const { data } = await api.post("/reports", {
+        reportedUserId: targetUser.id || targetUser._id,
+        reason,
+        details: details.trim(),
+      });
+      toast.success(data.message || "Safety report submitted.");
+      onSubmitted?.();
+      onClose?.();
+    } catch (err) {
+      setError(apiErrorMessage(err, "Could not submit safety report."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={`Report ${targetUser?.name || "Member"}`}
+      subtitle="Our Trust & Safety moderation team reviews all member reports."
+      size="sm"
+      footer={
+        <>
+          <Button variant="outline" size="sm" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button type="submit" form="report-member-form" variant="danger" size="sm" loading={busy}>
+            Submit Report
+          </Button>
+        </>
+      }
+    >
+      <form id="report-member-form" onSubmit={submit} className="space-y-4">
+        {error && (
+          <div role="alert" className="rounded-lg border border-error/30 bg-error/10 p-3 text-xs text-error">
+            {error}
+          </div>
+        )}
+        <Select
+          id="report-reason"
+          label="Reason"
+          required
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          options={REPORT_REASONS}
+        />
+        <TextArea
+          id="report-details"
+          label="Additional context"
+          hint="Optional details help moderators review faster (up to 500 characters)."
+          maxLength={500}
+          rows={4}
+          value={details}
+          onChange={(e) => setDetails(e.target.value)}
+          placeholder="Describe what happened..."
+        />
+      </form>
+    </Modal>
+  );
 }
 
-function ProfileCard({ person, onOpen, onLike, onPass, pending }) {
-  const photo = resolvePhotoUrl(person.profilePhoto || person.photos?.[0]);
+function ProfilePhotoGallery({ profile }) {
+  const photos = (
+    Array.isArray(profile?.photos) && profile.photos.length > 0
+      ? profile.photos
+      : [profile?.profilePhoto]
+  ).filter(Boolean);
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    setIndex(0);
+  }, [profile?.id, profile?._id]);
+
+  const currentUrl = photos[index] ? resolvePhotoUrl(photos[index]) : "";
+
   return (
-    <article className="profile-card">
-      <button type="button" className="profile-card-photo" onClick={onOpen} aria-label={`View ${person.name}'s profile`}>
-        {photo ? <img src={photo} alt={person.name} loading="lazy" /> : <div className="profile-photo-fallback"><Avatar person={person} size="xl" /></div>}
-        {person.distance && <span className="distance-pill"><Icon name="mapPin" size={12} />{person.distance}</span>}
-        {person.isVerified && <span className="verified-pill"><Icon name="checkCircle" size={13} /> Verified</span>}
-        <span className="photo-count"><Icon name="image" size={13} />{person.photos?.length || (photo ? 1 : 0)}</span>
-      </button>
-      <div className="profile-card-body">
-        <div className="profile-name-line"><button type="button" onClick={onOpen}><strong>{person.name}{person.age ? `, ${person.age}` : ""}</strong></button>{person.compatibilityScore && <span className="compatibility"><Icon name="heart" size={12} />{person.compatibilityScore}%</span>}</div>
-        <p className="profile-location">{person.city || "Location not shared"}</p>
-        {person.bio && <p className="profile-bio">{person.bio}</p>}
-        <div className="interest-row">{(person.mutualInterests?.length ? person.mutualInterests : person.interests || []).slice(0, 3).map((interest) => <span className="interest-pill" key={interest}>{interest}</span>)}</div>
-        <div className="profile-card-actions"><button className="round-action pass-action" type="button" disabled={pending} onClick={onPass} aria-label={`Pass on ${person.name}`}><Icon name="x" size={19} /></button><button className="round-action like-action" type="button" disabled={pending} onClick={() => onLike("like")} aria-label={`Like ${person.name}`}><Icon name="heart" size={20} /></button><button className="round-action spark-action" type="button" disabled={pending} onClick={() => onLike("superlike")} aria-label={`Send ${person.name} a super-like`}><Icon name="star" size={18} /></button></div>
+    <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl border border-base-300 bg-base-200 shadow-md">
+      {currentUrl ? (
+        <img
+          src={currentUrl}
+          alt={profile?.name || "Member profile"}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="h-full w-full flex flex-col items-center justify-center gap-2 hl-muted-text">
+          <Avatar name={profile?.name} size="2xl" />
+          <span className="text-xs">No profile photos added yet</span>
+        </div>
+      )}
+
+      {photos.length > 1 && (
+        <>
+          <div className="absolute top-3 inset-x-3 flex gap-1.5 z-10">
+            {photos.map((_, idx) => (
+              <button
+                key={idx}
+                type="button"
+                aria-label={`View photo ${idx + 1}`}
+                onClick={() => setIndex(idx)}
+                className={`h-1.5 flex-1 rounded-full transition-colors cursor-pointer ${
+                  idx === index ? "bg-white shadow-sm" : "bg-white/40 hover:bg-white/65"
+                }`}
+              />
+            ))}
+          </div>
+          <div className="absolute inset-y-0 left-2 flex items-center">
+            <IconButton
+              label="Previous photo"
+              size="sm"
+              variant="dark"
+              className="bg-slate-950/60 border-white/20 text-white hover:bg-slate-950/85"
+              onClick={() => setIndex((prev) => (prev - 1 + photos.length) % photos.length)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </IconButton>
+          </div>
+          <div className="absolute inset-y-0 right-2 flex items-center">
+            <IconButton
+              label="Next photo"
+              size="sm"
+              variant="dark"
+              className="bg-slate-950/60 border-white/20 text-white hover:bg-slate-950/85"
+              onClick={() => setIndex((prev) => (prev + 1) % photos.length)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </IconButton>
+          </div>
+        </>
+      )}
+
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent p-5 text-white">
+        <div className="flex items-end justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-2xl font-bold tracking-tight">
+                {profile?.name}
+                {profile?.age ? `, ${profile.age}` : ""}
+              </h2>
+              {profile?.isVerified && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-rose-500 to-pink-500 px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-xs">
+                  <ShieldCheck className="h-3 w-3" /> Verified
+                </span>
+              )}
+            </div>
+            <div className="mt-1 flex items-center gap-3 text-xs text-rose-100/90 flex-wrap">
+              {profile?.city && (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {profile.city}
+                </span>
+              )}
+              {profile?.distance && <span>{profile.distance}</span>}
+            </div>
+          </div>
+          {profile?.compatibilityScore && (
+            <div className="rounded-xl bg-white/20 backdrop-blur-md border border-white/25 px-3 py-1.5 text-right shrink-0">
+              <p className="text-[10px] uppercase tracking-wider text-rose-200 font-medium">Chemistry</p>
+              <p className="text-sm font-bold hl-tabular text-white">{profile.compatibilityScore}%</p>
+            </div>
+          )}
+        </div>
       </div>
-    </article>
+    </div>
   );
 }
 
 export function DiscoverPage() {
-  const navigate = useNavigate();
+  const { refreshProfile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialSearch = searchParams.get("search") || "";
-  const [search, setSearch] = useState(initialSearch);
-  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
-  const [pendingId, setPendingId] = useState("");
-  const [gender, setGender] = useState(searchParams.get("gender") || "all");
-  const [verifiedOnly, setVerifiedOnly] = useState(searchParams.get("verifiedOnly") === "true");
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 280);
-    return () => window.clearTimeout(timer);
-  }, [search]);
+  const [profiles, setProfiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [acting, setActing] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [matchResult, setMatchResult] = useState(null);
+  const [reportTarget, setReportTarget] = useState(null);
 
-  useEffect(() => {
-    setSearch(searchParams.get("search") || "");
-    setGender(searchParams.get("gender") || "all");
-    setVerifiedOnly(searchParams.get("verifiedOnly") === "true");
+  const searchQuery = searchParams.get("search") || "";
+  const lookingFor = searchParams.get("lookingFor") || "all";
+
+  const loadFeed = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = Object.fromEntries(searchParams.entries());
+      const { data } = await api.get("/profiles", { params });
+      setProfiles(data.profiles || []);
+    } catch (err) {
+      setError(apiErrorMessage(err, "Unable to load discovery profiles."));
+    } finally {
+      setLoading(false);
+    }
   }, [searchParams]);
 
-  const query = { search: debouncedSearch, gender, verifiedOnly };
-  const requestKey = JSON.stringify(query);
-  const fetchProfiles = async () => {
-    const params = {};
-    if (query.search) params.search = query.search;
-    if (query.gender !== "all") params.gender = query.gender;
-    if (query.verifiedOnly) params.verifiedOnly = "true";
-    params.limit = 40;
-    const { data } = await api.get("/profiles", { params });
-      return data.profiles || [];
+  useEffect(() => {
+    loadFeed();
+  }, [loadFeed]);
+
+  const currentProfile = profiles[0] || null;
+
+  const advanceDeck = () => {
+    setProfiles((prev) => prev.slice(1));
   };
-  const { data: profiles, loading, error, reload } = useRemote(fetchProfiles, requestKey);
 
-  async function actOnProfile(person, type) {
-    const id = person.id || person._id;
-    setPendingId(String(id));
+  const handlePass = async () => {
+    if (!currentProfile || acting) return;
+    setActing(true);
     try {
-      if (type === "pass") {
-        await api.post(`/likes/${encodeURIComponent(id)}/pass`);
-        toast("Profile passed");
-      } else {
-        const { data } = await api.post(`/likes/${encodeURIComponent(id)}`, { type });
-        toast.success(data.matchId || data.isMatch ? `It’s a match with ${person.name}!` : type === "superlike" ? `Super-like sent to ${person.name}` : `You liked ${person.name}`);
-      }
-      await reload();
-    } catch (requestError) {
-      toast.error(requestError.response?.data?.message || "We could not save that action.");
+      await api.post(`/likes/${currentProfile.id}/pass`);
+      advanceDeck();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not pass profile."));
     } finally {
-      setPendingId("");
+      setActing(false);
     }
-  }
+  };
 
-  function updateQuery(next) {
-    const params = new URLSearchParams(searchParams);
-    Object.entries(next).forEach(([key, value]) => value && value !== "all" ? params.set(key, String(value)) : params.delete(key));
-    setSearchParams(params, { replace: true });
-  }
-
-  return <div className="page-content discover-page"><PageHeading eyebrow="A GOOD PLACE TO START" title="Discover people" description="Take a look around. The best conversations often start with one shared detail." action={<Button to="/search" variant="soft"><Icon name="sliders" size={16} /> Search filters</Button>} />
-    <div className="discover-toolbar"><label className="member-search"><Icon name="search" size={17} /><input type="search" aria-label="Search profiles" placeholder="Try a name, interest, or place" value={search} onChange={(event) => { setSearch(event.target.value); updateQuery({ search: event.target.value }); }} /><kbd>⌘ K</kbd></label><div className="discover-quick-filters"><label><span>Show</span><select aria-label="Filter profiles by gender" value={gender} onChange={(event) => { setGender(event.target.value); updateQuery({ gender: event.target.value }); }}><option value="all">Everyone</option><option value="female">Women</option><option value="male">Men</option><option value="non-binary">Non-binary</option><option value="other">Other</option></select></label><label className="verified-toggle"><input type="checkbox" checked={verifiedOnly} onChange={(event) => { setVerifiedOnly(event.target.checked); updateQuery({ verifiedOnly: event.target.checked ? "true" : "" }); }} /> Verified only</label></div></div>
-    <div className="results-meta"><span>{loading ? "Finding profiles…" : `${profiles?.length || 0} profiles to explore`}</span><span><Icon name="shield" size={14} /> Real profiles. Mutual interest.</span></div>
-    {error && <ErrorNotice onRetry={reload}>{error}</ErrorNotice>}
-    {loading && !profiles ? <div className="profile-grid skeleton-grid">{Array.from({ length: 4 }, (_, index) => <div className="profile-skeleton" key={index} />)}</div> : profiles?.length ? <div className="profile-grid">{profiles.map((person) => <ProfileCard key={person.id || person._id} person={person} pending={pendingId === String(person.id || person._id)} onOpen={() => navigate(`/profile/${person.id || person._id}`)} onLike={(type) => actOnProfile(person, type)} onPass={() => actOnProfile(person, "pass")} />)}</div> : !error && <EmptyState icon="compass" title="You’ve seen everyone for now" text="Try widening your filters or check back later as more people join HeartLink." action={<Button to="/search" variant="soft">Adjust filters <Icon name="arrowRight" size={15} /></Button>} />}
-    {profiles?.length > 0 && <div className="list-end-note"><Icon name="heart" size={14} /> Take your time. A good connection doesn’t need to be rushed.</div>}
-  </div>;
-}
-
-function ReportDialog({ person, onClose }) {
-  const [reason, setReason] = useState("inappropriate_content");
-  const [details, setDetails] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  if (!person) return null;
-  async function submit(event) {
-    event.preventDefault();
-    setBusy(true); setError("");
+  const handleLike = async (type = "like", comment = "") => {
+    if (!currentProfile || acting) return;
+    setActing(true);
     try {
-      await api.post("/reports", { reportedUserId: person.id || person._id, reason, details });
-      toast.success("Your report has been sent to the safety team.");
-      onClose();
-    } catch (requestError) {
-      setError(requestError.response?.data?.message || "We could not submit the report.");
-    } finally { setBusy(false); }
-  }
-  return <div className="modal-backdrop"><section className="confirm-dialog report-dialog" role="dialog" aria-modal="true" aria-labelledby="report-title"><button className="modal-close" type="button" onClick={onClose} aria-label="Close"><Icon name="x" /></button><span className="confirm-icon destructive"><Icon name="shield" size={22} /></span><h2 id="report-title">Report this profile</h2><p>Reports are reviewed by the HeartLink safety team.</p><form onSubmit={submit}><label className="field"><span>What happened?</span><select value={reason} onChange={(event) => setReason(event.target.value)}><option value="inappropriate_photos">Inappropriate photos</option><option value="inappropriate_content">Inappropriate content</option><option value="harassment">Harassment</option><option value="fake_profile">Fake profile</option><option value="spam_or_scam">Spam or scam</option><option value="underage">Underage concern</option><option value="other">Other</option></select></label><label className="field"><span>Details (optional)</span><textarea value={details} onChange={(event) => setDetails(event.target.value)} maxLength={500} rows={4} placeholder="Share any details that could help us review this…" /></label>{error && <p className="field-error" role="alert">{error}</p>}<div className="confirm-actions"><Button variant="soft" onClick={onClose}>Cancel</Button><Button type="submit" variant="danger" disabled={busy}>{busy ? "Sending…" : "Send report"}</Button></div></form></section></div>;
+      const { data } = await api.post(`/likes/${currentProfile.id}`, {
+        type,
+        comment: comment.trim() || undefined,
+      });
+      setNoteOpen(false);
+      setNoteText("");
+      advanceDeck();
+      refreshProfile?.();
+      if (data.isMatch) {
+        setMatchResult({ matchId: data.matchId, user: data.matchedUser || currentProfile });
+      } else {
+        toast.success(type === "superlike" ? `Spark sent to ${currentProfile.name}` : `Liked ${currentProfile.name}`);
+      }
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not record like."));
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const handleRewind = async () => {
+    if (acting) return;
+    setActing(true);
+    try {
+      const { data } = await api.post("/profiles/rewind");
+      toast.success(data.message || "Last pass rewound.");
+      if (data.profile) {
+        setProfiles((prev) => [data.profile, ...prev.filter((p) => p.id !== data.profile.id)]);
+      } else {
+        loadFeed();
+      }
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "No recent pass available to rewind."));
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const handleResetDeck = async () => {
+    setActing(true);
+    try {
+      const { data } = await api.post("/profiles/reset");
+      toast.success(data.message || "Discovery deck reset.");
+      await loadFeed();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not reset discovery deck."));
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const handleBlock = async () => {
+    if (!currentProfile) return;
+    try {
+      await api.post(`/blocks/${currentProfile.id}`);
+      toast.success(`${currentProfile.name} blocked.`);
+      advanceDeck();
+      refreshProfile?.();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not block member."));
+    }
+  };
+
+  const updateFilter = (key, value) => {
+    const next = new URLSearchParams(searchParams);
+    if (!value || value === "all") next.delete(key);
+    else next.set(key, value);
+    setSearchParams(next);
+  };
+
+  return (
+    <AppShell
+      title="Discover"
+      subtitle="Find your spark. Like to connect, send a Spark note, or pass to see the next person."
+      actions={
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRewind}
+            disabled={acting}
+            leftIcon={<RotateCcw className="h-3.5 w-3.5" />}
+          >
+            Rewind Pass
+          </Button>
+          <Link to="/search">
+            <Button variant="outline" size="sm" leftIcon={<SlidersHorizontal className="h-3.5 w-3.5" />}>
+              Filters
+            </Button>
+          </Link>
+        </>
+      }
+    >
+      <PageTransition className="space-y-6">
+        {/* Filter Bar */}
+        <Card className="p-0" noPadding>
+          <div className="p-3.5 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <SearchBar
+              value={searchQuery}
+              onChange={(e) => updateFilter("search", e.target.value)}
+              onClear={() => updateFilter("search", "")}
+              placeholder="Filter by name, city, bio, or interest..."
+              label="Filter discovery profiles"
+              className="flex-1"
+            />
+            <div className="flex items-center gap-2">
+              <select
+                aria-label="Relationship intent filter"
+                value={lookingFor}
+                onChange={(e) => updateFilter("lookingFor", e.target.value)}
+                className="select select-bordered select-sm h-9 rounded-lg bg-base-100 border-base-300 text-xs"
+              >
+                <option value="all">All Intents</option>
+                <option value="relationship">Relationship</option>
+                <option value="friendship">Friendship</option>
+                <option value="casual">Casual</option>
+              </select>
+              <span className="text-xs hl-muted-text hl-tabular whitespace-nowrap px-2">
+                {profiles.length} remaining
+              </span>
+            </div>
+          </div>
+        </Card>
+
+        {error && <ErrorNotice message={error} onRetry={loadFeed} />}
+
+        {loading ? (
+          <PageSpinner label="Curating compatible profiles..." />
+        ) : !currentProfile ? (
+          <Card>
+            <EmptyState
+              icon={Compass}
+              title="You've reached the end of your current queue"
+              description="Reset your previous passes or broaden your discovery preferences to see more members."
+              action={
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button size="sm" onClick={handleResetDeck} loading={acting} leftIcon={<RotateCcw className="h-3.5 w-3.5" />}>
+                    Reset Passes
+                  </Button>
+                  <Link to="/search">
+                    <Button size="sm" variant="outline">Adjust Filters</Button>
+                  </Link>
+                </div>
+              }
+            />
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Visual Card + Primary Controls */}
+            <div className="lg:col-span-5 space-y-4">
+              <ProfilePhotoGallery profile={currentProfile} />
+              <Card noPadding className="p-3.5 shadow-md border-rose-500/15">
+                <div className="grid grid-cols-3 gap-2.5">
+                  <Button
+                    variant="outline"
+                    size="md"
+                    disabled={acting}
+                    onClick={handlePass}
+                    className="hover:border-rose-300 hover:text-rose-600 dark:hover:text-rose-400 font-semibold"
+                    leftIcon={<X className="h-4 w-4 text-rose-500" strokeWidth={2.5} />}
+                  >
+                    Pass
+                  </Button>
+                  <Button
+                    variant="soft-primary"
+                    size="md"
+                    disabled={acting}
+                    onClick={() => setNoteOpen(true)}
+                    className="font-semibold"
+                    leftIcon={<Sparkles className="h-4 w-4 text-amber-500" />}
+                  >
+                    Spark
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    loading={acting}
+                    onClick={() => handleLike("like")}
+                    className="font-bold shadow-md"
+                    leftIcon={<Heart className="h-4 w-4 fill-white text-white" />}
+                  >
+                    Like
+                  </Button>
+                </div>
+              </Card>
+            </div>
+
+            {/* Profile Detail Card */}
+            <div className="lg:col-span-7 space-y-4">
+              <Card
+                header={
+                  <>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge tone="primary" className="capitalize">
+                        Looking for {currentProfile.lookingFor || "relationship"}
+                      </Badge>
+                      {currentProfile.mutualInterests?.length > 0 && (
+                        <Badge tone="success">
+                          {currentProfile.mutualInterests.length} shared interest
+                          {currentProfile.mutualInterests.length === 1 ? "" : "s"}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Link to={`/profile/${currentProfile.id}`}>
+                        <Button size="xs" variant="ghost">Full Profile</Button>
+                      </Link>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        onClick={() => setReportTarget(currentProfile)}
+                        leftIcon={<Flag className="h-3.5 w-3.5" />}
+                      >
+                        Report
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        onClick={handleBlock}
+                        leftIcon={<Ban className="h-3.5 w-3.5" />}
+                      >
+                        Block
+                      </Button>
+                    </div>
+                  </>
+                }
+              >
+                <div className="space-y-5">
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider hl-muted-text mb-1.5">
+                      About {currentProfile.name}
+                    </h3>
+                    <p className="text-sm text-base-content leading-relaxed">
+                      {currentProfile.bio || "No bio shared yet."}
+                    </p>
+                  </div>
+
+                  {currentProfile.interests?.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider hl-muted-text mb-2">
+                        Interests
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {currentProfile.interests.map((tag) => {
+                          const isMutual = currentProfile.mutualInterests?.includes(tag);
+                          return (
+                            <Badge key={tag} tone={isMutual ? "primary" : "neutral"}>
+                              {isMutual && <Check className="h-3 w-3" />}
+                              {tag}
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentProfile.prompts?.length > 0 && (
+                    <div className="space-y-2.5">
+                      <h3 className="text-xs font-semibold uppercase tracking-wider hl-muted-text">
+                        Prompts
+                      </h3>
+                      {currentProfile.prompts.map((prompt, idx) => (
+                        <div key={idx} className="rounded-lg border hl-subtle-divider bg-base-200/50 p-3.5">
+                          <p className="text-xs font-medium hl-accent-text">{prompt.question}</p>
+                          <p className="text-sm text-base-content mt-1">{prompt.answer}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {currentProfile.lifestyle &&
+                    Object.values(currentProfile.lifestyle).some(Boolean) && (
+                      <div>
+                        <h3 className="text-xs font-semibold uppercase tracking-wider hl-muted-text mb-2">
+                          Lifestyle
+                        </h3>
+                        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+                          {Object.entries(currentProfile.lifestyle)
+                            .filter(([, val]) => Boolean(val))
+                            .map(([key, val]) => (
+                              <div key={key} className="rounded-lg border hl-subtle-divider bg-base-200/40 px-3 py-2">
+                                <dt className="capitalize hl-muted-text">{key}</dt>
+                                <dd className="font-medium text-base-content mt-0.5">{val}</dd>
+                              </div>
+                            ))}
+                        </dl>
+                      </div>
+                    )}
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
+      </PageTransition>
+
+      {/* Send Note / Spark Modal */}
+      <Modal
+        open={noteOpen}
+        onClose={() => setNoteOpen(false)}
+        title={`Send a Spark to ${currentProfile?.name || ""}`}
+        subtitle="Include an optional opening note (up to 280 characters)."
+        size="sm"
+        footer={
+          <>
+            <Button variant="outline" size="sm" onClick={() => setNoteOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              loading={acting}
+              onClick={() => handleLike("superlike", noteText)}
+              leftIcon={<Sparkles className="h-3.5 w-3.5" />}
+            >
+              Send Spark
+            </Button>
+          </>
+        }
+      >
+        <TextArea
+          id="spark-note"
+          label="Opening note"
+          maxLength={280}
+          rows={3}
+          value={noteText}
+          onChange={(e) => setNoteText(e.target.value)}
+          placeholder="Mention something you both share..."
+        />
+      </Modal>
+
+      {/* Mutual Match Modal */}
+      <Modal
+        open={Boolean(matchResult)}
+        onClose={() => setMatchResult(null)}
+        title="It's a Mutual Match! 💕"
+        size="sm"
+        footer={
+          <>
+            <Button variant="outline" size="sm" onClick={() => setMatchResult(null)}>
+              Keep Swiping
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                const mId = matchResult?.matchId;
+                setMatchResult(null);
+                navigate(`/messages/${mId}`);
+              }}
+              leftIcon={<MessageSquare className="h-3.5 w-3.5" />}
+            >
+              Send Message
+            </Button>
+          </>
+        }
+      >
+        {matchResult && (
+          <div className="flex flex-col items-center text-center space-y-3 py-3">
+            <div className="relative">
+              <Avatar
+                src={matchResult.user?.profilePhoto || matchResult.user?.photos?.[0]}
+                name={matchResult.user?.name}
+                size="2xl"
+                verified={matchResult.user?.isVerified}
+                className="ring-4 ring-rose-500/30"
+              />
+              <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-rose-500 text-white shadow-md">
+                <Heart className="h-4 w-4 fill-white" />
+              </span>
+            </div>
+            <div>
+              <p className="text-lg font-bold text-base-content">
+                You and {matchResult.user?.name} liked each other!
+              </p>
+              <p className="text-xs hl-muted-text mt-1 max-w-xs mx-auto">
+                The spark is mutual. Break the ice with a thoughtful message or fun question.
+              </p>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <ReportDialog
+        open={Boolean(reportTarget)}
+        user={reportTarget}
+        onClose={() => setReportTarget(null)}
+      />
+    </AppShell>
+  );
 }
 
 export function ProfilePage() {
   const { profileId } = useParams();
   const navigate = useNavigate();
-  const [reportOpen, setReportOpen] = useState(false);
-  const [confirmBlock, setConfirmBlock] = useState(false);
+  const { refreshProfile } = useAuth();
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const { data, loading, error, reload } = useRemote(async () => {
-    const { data: result } = await api.get(`/profiles/${encodeURIComponent(profileId)}`);
-    return result.profile || result.user;
-  }, profileId);
+  const [reportOpen, setReportOpen] = useState(false);
 
-  async function like(type = "like") {
-    if (!data) return;
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    api
+      .get(`/profiles/${profileId}`)
+      .then(({ data }) => {
+        if (active) {
+          setProfile(data.user || data.profile || data);
+          setError("");
+        }
+      })
+      .catch((err) => {
+        if (active) setError(apiErrorMessage(err, "Profile unavailable."));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [profileId]);
+
+  const handleLike = async () => {
     setBusy(true);
     try {
-      const { data: result } = await api.post(`/likes/${encodeURIComponent(data.id || data._id)}`, { type });
-      toast.success(result.matchId || result.isMatch ? `It’s a match with ${data.name}!` : type === "superlike" ? `Super-like sent to ${data.name}` : `You liked ${data.name}`);
-      if (result.matchId) navigate(`/messages/${result.matchId}`);
-    } catch (requestError) { toast.error(requestError.response?.data?.message || "We could not send that like."); }
-    finally { setBusy(false); }
-  }
+      const { data } = await api.post(`/likes/${profileId}`, { type: "like" });
+      refreshProfile?.();
+      if (data.isMatch && data.matchId) {
+        toast.success(`Matched with ${profile?.name}!`);
+        navigate(`/messages/${data.matchId}`);
+      } else {
+        toast.success(`Liked ${profile?.name}`);
+      }
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Unable to like profile."));
+    } finally {
+      setBusy(false);
+    }
+  };
 
-  async function block() {
+  const handleBlock = async () => {
     setBusy(true);
     try {
-      await api.post(`/blocks/${encodeURIComponent(data.id || data._id)}`);
-      toast.success(`${data.name} has been blocked.`);
-      navigate("/discover", { replace: true });
-    } catch (requestError) { toast.error(requestError.response?.data?.message || "We could not block this member."); }
-    finally { setBusy(false); setConfirmBlock(false); }
-  }
+      await api.post(`/blocks/${profileId}`);
+      toast.success("Member blocked.");
+      refreshProfile?.();
+      navigate("/discover");
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not block member."));
+    } finally {
+      setBusy(false);
+    }
+  };
 
-  if (loading && !data) return <div className="page-content"><PageSpinner label="Opening profile" /></div>;
-  if (error && !data) return <div className="page-content"><ErrorNotice onRetry={reload}>{error}</ErrorNotice></div>;
-  if (!data) return <div className="page-content"><EmptyState icon="user" title="Profile unavailable" text="This profile may have been removed or is no longer visible." action={<Button to="/discover" variant="soft">Back to discover</Button>} /></div>;
-  const photos = data.photos?.length ? data.photos : [data.profilePhoto].filter(Boolean);
-  return <div className="page-content profile-detail-page"><div className="profile-back-row"><Button variant="quiet" onClick={() => navigate(-1)}><Icon name="arrowLeft" size={16} /> Back</Button><button className="profile-more" type="button" aria-label="Safety actions" onClick={() => setReportOpen(true)}><Icon name="more" /></button></div><article className="profile-detail-card"><div className="detail-gallery"><div className="detail-gallery-main">{photos[0] ? <img src={resolvePhotoUrl(photos[0])} alt={`${data.name}'s profile`} /> : <div className="profile-photo-fallback"><Avatar person={data} size="xl" /></div>}<span className="gallery-count"><Icon name="image" size={14} />{photos.length} {photos.length === 1 ? "photo" : "photos"}</span></div>{photos.length > 1 && <div className="detail-gallery-side">{photos.slice(1, 3).map((photo, index) => <img key={`${photo}-${index}`} src={resolvePhotoUrl(photo)} alt={`${data.name} photo ${index + 2}`} />)}</div>}</div><div className="profile-detail-body"><div className="detail-intro"><div><span className="eyebrow">A LITTLE ABOUT {data.name?.split(" ")[0]?.toUpperCase()}</span><h1>{data.name}{data.age ? `, ${data.age}` : ""}{data.isVerified && <span className="verified-check" title="Verified profile"><Icon name="checkCircle" size={20} /></span>}</h1><p><Icon name="mapPin" size={15} /> {data.city || "Location not shared"}{data.distance ? ` · ${data.distance}` : ""}</p></div><span className="intent-pill">Looking for {data.lookingFor || "a connection"}</span></div>{data.bio && <section className="detail-section"><h2>A little about me</h2><p className="profile-bio-full">{data.bio}</p></section>}{data.interests?.length > 0 && <section className="detail-section"><h2>Things I enjoy</h2><div className="detail-interests">{data.interests.map((interest) => <span className="interest-pill" key={interest}>{interest}</span>)}</div></section>}{data.prompts?.length > 0 && <section className="detail-section"><h2>Conversation starters</h2><div className="prompt-grid">{data.prompts.map((prompt, index) => <article className="prompt-card" key={`${prompt.question}-${index}`}><small>{prompt.question}</small><p>{prompt.answer}</p></article>)}</div></section>}{data.lifestyle && Object.entries(data.lifestyle).filter(([, value]) => value).length > 0 && <section className="detail-section"><h2>More about me</h2><div className="lifestyle-grid">{Object.entries(data.lifestyle).filter(([, value]) => value).map(([key, value]) => <div key={key}><small>{key.replace(/([A-Z])/g, " $1")}</small><strong>{String(value)}</strong></div>)}</div></section>}<div className="detail-actions"><Button disabled={busy} onClick={() => like("like")}><Icon name="heart" size={17} /> Like {data.name?.split(" ")[0]}</Button><Button variant="soft" disabled={busy} onClick={() => like("superlike")}><Icon name="star" size={16} /> Super-like</Button><button className="text-action" type="button" onClick={() => setReportOpen(true)}><Icon name="shield" size={15} /> Report</button><button className="text-action danger-text" type="button" onClick={() => setConfirmBlock(true)}><Icon name="x" size={15} /> Block</button></div></div></article><ReportDialog person={reportOpen ? data : null} onClose={() => setReportOpen(false)} /><ConfirmDialog open={confirmBlock} title={`Block ${data.name}?`} description="They won’t appear in discovery or be able to contact you. This also ends any active match between you." confirmLabel="Block member" destructive busy={busy} onConfirm={block} onCancel={() => setConfirmBlock(false)} /></div>;
+  return (
+    <AppShell
+      title={profile ? `${profile.name}${profile.age ? `, ${profile.age}` : ""}` : "Member Profile"}
+      subtitle={profile?.city || "Profile details and compatibility"}
+      actions={
+        <Button variant="outline" size="sm" onClick={() => navigate(-1)} leftIcon={<ChevronLeft className="h-4 w-4" />}>
+          Back
+        </Button>
+      }
+    >
+      <PageTransition>
+        {loading ? (
+          <PageSpinner label="Loading member profile..." />
+        ) : error ? (
+          <ErrorNotice message={error} />
+        ) : profile ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-5 space-y-4">
+              <ProfilePhotoGallery profile={profile} />
+              <Card noPadding className="p-3">
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setReportOpen(true)}
+                    leftIcon={<Flag className="h-3.5 w-3.5" />}
+                  >
+                    Report
+                  </Button>
+                  <Button
+                    variant="soft-danger"
+                    size="sm"
+                    disabled={busy}
+                    onClick={handleBlock}
+                    leftIcon={<Ban className="h-3.5 w-3.5" />}
+                  >
+                    Block
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    loading={busy}
+                    onClick={handleLike}
+                    leftIcon={<Heart className="h-3.5 w-3.5" />}
+                  >
+                    Like
+                  </Button>
+                </div>
+              </Card>
+            </div>
+            <div className="lg:col-span-7 space-y-4">
+              <Card>
+                <div className="space-y-5">
+                  <div className="flex flex-wrap gap-2">
+                    {profile.lookingFor && (
+                      <Badge tone="primary" className="capitalize">
+                        Looking for {profile.lookingFor}
+                      </Badge>
+                    )}
+                    {profile.gender && <Badge tone="neutral" className="capitalize">{profile.gender}</Badge>}
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-semibold uppercase tracking-wider hl-muted-text mb-1.5">
+                      Bio
+                    </h2>
+                    <p className="text-sm text-base-content leading-relaxed">
+                      {profile.bio || "No bio added yet."}
+                    </p>
+                  </div>
+                  {profile.interests?.length > 0 && (
+                    <div>
+                      <h2 className="text-xs font-semibold uppercase tracking-wider hl-muted-text mb-2">
+                        Interests
+                      </h2>
+                      <div className="flex flex-wrap gap-2">
+                        {profile.interests.map((tag) => (
+                          <Badge key={tag}>{tag}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {profile.prompts?.length > 0 && (
+                    <div className="space-y-2.5">
+                      <h2 className="text-xs font-semibold uppercase tracking-wider hl-muted-text">
+                        Prompts
+                      </h2>
+                      {profile.prompts.map((p, idx) => (
+                        <div key={idx} className="rounded-lg border hl-subtle-divider bg-base-200/50 p-3.5">
+                          <p className="text-xs font-medium hl-accent-text">{p.question}</p>
+                          <p className="text-sm text-base-content mt-1">{p.answer}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+          </div>
+        ) : null}
+      </PageTransition>
+      <ReportDialog open={reportOpen} user={profile} onClose={() => setReportOpen(false)} />
+    </AppShell>
+  );
 }
 
 export function LikesPage() {
-  const [tab, setTab] = useState("received");
+  const { refreshProfile } = useAuth();
   const navigate = useNavigate();
-  const fetchLikes = async () => {
-    const { data } = await api.get(`/likes/${tab}`);
-    return data.likes || [];
-  };
-  const { data: likes, loading, error, reload } = useRemote(fetchLikes, tab);
-  const [pending, setPending] = useState("");
+  const [tab, setTab] = useState("received");
+  const [received, setReceived] = useState([]);
+  const [sent, setSent] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [busyId, setBusyId] = useState("");
+
+  const loadLikes = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [recRes, sentRes] = await Promise.all([
+        api.get("/likes/received"),
+        api.get("/likes/sent"),
+      ]);
+      setReceived(recRes.data.likes || []);
+      setSent(sentRes.data.likes || []);
+    } catch (err) {
+      setError(apiErrorMessage(err, "Unable to load likes."));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const handleLikesChanged = () => {
-      if (tab === "received") {
-        reload({ silent: true });
-      }
-    };
-    window.addEventListener("heartlink:likes_changed", handleLikesChanged);
-    return () => window.removeEventListener("heartlink:likes_changed", handleLikesChanged);
-  }, [tab, reload]);
-  async function respond(person) {
-    const id = person.id || person._id;
-    setPending(String(id));
+    loadLikes();
+    const sync = () => loadLikes();
+    window.addEventListener("heartlink:likes_changed", sync);
+    return () => window.removeEventListener("heartlink:likes_changed", sync);
+  }, [loadLikes]);
+
+  const likeBack = async (person) => {
+    setBusyId(person.id);
     try {
-      const { data } = await api.post(`/likes/${encodeURIComponent(id)}`, { type: "like" });
-      toast.success(data.matchId || data.isMatch ? `It’s a match with ${person.name}!` : `You liked ${person.name} back`);
-      await reload();
-      if (data.matchId) navigate(`/messages/${data.matchId}`);
-    } catch (requestError) { toast.error(requestError.response?.data?.message || "We could not return that like."); }
-    finally { setPending(""); }
-  }
-  async function remove(person) {
-    const id = person.id || person._id;
-    setPending(String(id));
-    try { await api.delete(`/likes/${encodeURIComponent(id)}`); toast.success("Like removed"); await reload(); }
-    catch (requestError) { toast.error(requestError.response?.data?.message || "We could not remove that like."); }
-    finally { setPending(""); }
-  }
-  return <div className="page-content likes-page"><PageHeading eyebrow="A LITTLE INTEREST GOES A LONG WAY" title="Likes" description="See who’s shown interest, and choose what feels right for you." /><div className="tabs-row" role="tablist" aria-label="Like list"><button type="button" role="tab" aria-selected={tab === "received"} className={tab === "received" ? "active" : ""} onClick={() => setTab("received")}>Received</button><button type="button" role="tab" aria-selected={tab === "sent"} className={tab === "sent" ? "active" : ""} onClick={() => setTab("sent")}>Sent</button></div>{error && <ErrorNotice onRetry={reload}>{error}</ErrorNotice>}{loading && !likes ? <PageSpinner label="Checking your likes" /> : likes?.length ? <div className="likes-grid">{likes.map((person) => <article className="like-card" key={person.id || person._id}><button className="like-photo" type="button" onClick={() => navigate(`/profile/${person.id || person._id}`)}>{person.profilePhoto ? <img src={resolvePhotoUrl(person.profilePhoto)} alt={person.name} loading="lazy" /> : <div className="profile-photo-fallback"><Avatar person={person} size="xl" /></div>}<span className={`like-type ${person.type === "superlike" ? "superlike" : ""}`}><Icon name={person.type === "superlike" ? "star" : "heart"} size={13} />{person.type === "superlike" ? "Super-like" : "Like"}</span></button><div className="like-card-body"><button className="profile-name-button" type="button" onClick={() => navigate(`/profile/${person.id || person._id}`)}><strong>{person.name}{person.age ? `, ${person.age}` : ""}</strong></button><span>{person.city || "Location not shared"}{person.likedAt ? ` · ${displayDate(person.likedAt)}` : ""}</span><div className="interest-row">{(person.interests || []).slice(0, 2).map((interest) => <span className="interest-pill" key={interest}>{interest}</span>)}</div><div className="like-card-actions">{tab === "received" ? <Button disabled={pending === String(person.id || person._id)} onClick={() => respond(person)}><Icon name="heart" size={15} /> Like back</Button> : <Button variant="soft" disabled={pending === String(person.id || person._id)} onClick={() => remove(person)}>Remove like</Button>}<Button variant="quiet" onClick={() => navigate(`/profile/${person.id || person._id}`)}>View profile</Button></div></div></article>)}</div> : !error && <EmptyState icon="heart" title={tab === "received" ? "No likes just yet" : "You haven’t sent a like yet"} text={tab === "received" ? "When someone likes your profile, you’ll find them here. Keep your profile feeling like you." : "Explore profiles and send a like when someone catches your attention."} action={<Button to="/discover">Explore profiles <Icon name="arrowRight" size={15} /></Button>} />}</div>;
+      const { data } = await api.post(`/likes/${person.id}`, { type: "like" });
+      refreshProfile?.();
+      if (data.isMatch && data.matchId) {
+        toast.success(`You matched with ${person.name}!`);
+        navigate(`/messages/${data.matchId}`);
+      } else {
+        loadLikes();
+      }
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not connect."));
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const passIncoming = async (person) => {
+    setBusyId(person.id);
+    try {
+      await api.post(`/likes/${person.id}/pass`);
+      setReceived((prev) => prev.filter((item) => item.id !== person.id));
+      refreshProfile?.();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not pass profile."));
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const withdrawSent = async (person) => {
+    setBusyId(person.id);
+    try {
+      await api.delete(`/likes/${person.id}`);
+      setSent((prev) => prev.filter((item) => item.id !== person.id));
+      refreshProfile?.();
+      toast.success("Like withdrawn");
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not withdraw like."));
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const items = tab === "received" ? received : sent;
+
+  return (
+    <AppShell
+      title="Likes & Admirers"
+      subtitle="See who liked your profile and match instantly, or check profiles you've swiped right on."
+    >
+      <PageTransition className="space-y-6">
+        <div role="tablist" aria-label="Likes category" className="inline-flex rounded-xl border border-base-300 bg-base-100 p-1 shadow-xs">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "received"}
+            onClick={() => setTab("received")}
+            className={`rounded-lg px-4 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+              tab === "received" ? "bg-primary text-primary-content shadow-xs" : "hl-muted-text hover:text-base-content"
+            }`}
+          >
+            Liked You ({received.length})
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "sent"}
+            onClick={() => setTab("sent")}
+            className={`rounded-lg px-4 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+              tab === "sent" ? "bg-primary text-primary-content shadow-xs" : "hl-muted-text hover:text-base-content"
+            }`}
+          >
+            Your Likes ({sent.length})
+          </button>
+        </div>
+
+        {error && <ErrorNotice message={error} onRetry={loadLikes} />}
+
+        {loading ? (
+          <PageSpinner label="Loading likes..." />
+        ) : items.length === 0 ? (
+          <Card>
+            <EmptyState
+              icon={Heart}
+              title={tab === "received" ? "No incoming likes yet" : "No pending sent likes"}
+              description={
+                tab === "received"
+                  ? "Browse Discovery or refine your profile details to appear in more feeds."
+                  : "Profiles you like in Discovery appear here until a match occurs."
+              }
+              action={
+                <Link to="/discover">
+                  <Button size="sm">Open Discovery</Button>
+                </Link>
+              }
+            />
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {items.map((person) => (
+              <Card key={person.id} variant="interactive" noPadding className="flex flex-col">
+                <div className="relative aspect-[4/3] w-full bg-base-200 overflow-hidden">
+                  {person.profilePhoto ? (
+                    <img
+                      src={resolvePhotoUrl(person.profilePhoto)}
+                      alt={person.name}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center">
+                      <Avatar name={person.name} size="xl" />
+                    </div>
+                  )}
+                  {person.type === "superlike" && (
+                    <div className="absolute top-3 left-3">
+                      <Badge tone="purple">Spark</Badge>
+                    </div>
+                  )}
+                </div>
+                <div className="p-4 flex-1 flex flex-col justify-between gap-4">
+                  <div>
+                    <div className="flex items-center justify-between gap-2">
+                      <Link to={`/profile/${person.id}`} className="text-sm font-semibold text-base-content hover:underline truncate">
+                        {person.name}
+                        {person.age ? `, ${person.age}` : ""}
+                      </Link>
+                      {person.isVerified && <ShieldCheck className="h-4 w-4 text-rose-500 shrink-0" />}
+                    </div>
+                    <p className="text-xs hl-muted-text mt-0.5 truncate">{person.city || "Nearby"}</p>
+                    {person.bio && <p className="text-xs hl-muted-text mt-2 line-clamp-2">{person.bio}</p>}
+                  </div>
+                  {tab === "received" ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busyId === person.id}
+                        onClick={() => passIncoming(person)}
+                      >
+                        Pass
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        loading={busyId === person.id}
+                        onClick={() => likeBack(person)}
+                        leftIcon={<Heart className="h-3.5 w-3.5 fill-white text-white" />}
+                      >
+                        Match
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Link to={`/profile/${person.id}`} className="flex-1">
+                        <Button size="sm" variant="outline" fullWidth>View Profile</Button>
+                      </Link>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        loading={busyId === person.id}
+                        onClick={() => withdrawSent(person)}
+                      >
+                        Withdraw
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </PageTransition>
+    </AppShell>
+  );
 }
 
 export function MatchesPage() {
-  const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-  const [confirming, setConfirming] = useState(null);
-  const [pending, setPending] = useState(false);
-  const { data: matches, loading, error, reload, setData } = useRemote(async () => {
-    const { data } = await api.get("/matches");
-    return data.matches || [];
-  }, "matches");
+  const { refreshProfile } = useAuth();
+  const [matches, setMatches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [unmatchTarget, setUnmatchTarget] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const loadMatches = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const { data } = await api.get("/matches");
+      setMatches(data.matches || []);
+    } catch (err) {
+      setError(apiErrorMessage(err, "Unable to load your matches."));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const handleMatchesChanged = () => reload({ silent: true });
-    window.addEventListener("heartlink:matches_changed", handleMatchesChanged);
-    return () => window.removeEventListener("heartlink:matches_changed", handleMatchesChanged);
-  }, [reload]);
-
-  useEffect(() => {
-    const handlePresenceUpdate = (event) => {
-      const { userId, online } = event.detail || {};
-      if (!userId) return;
-      setData((currentMatches) => {
-        if (!currentMatches) return currentMatches;
-        return currentMatches.map((m) => {
-          if (String(m.matchedUser?.id || m.matchedUser?._id) === String(userId)) {
-            return {
-              ...m,
-              matchedUser: {
-                ...m.matchedUser,
-                online: Boolean(online),
-              },
-            };
-          }
-          return m;
-        });
-      });
+    loadMatches();
+    const sync = () => loadMatches();
+    window.addEventListener("heartlink:matches_changed", sync);
+    window.addEventListener("heartlink:presence_update", sync);
+    return () => {
+      window.removeEventListener("heartlink:matches_changed", sync);
+      window.removeEventListener("heartlink:presence_update", sync);
     };
-    window.addEventListener("heartlink:presence_update", handlePresenceUpdate);
-    return () => window.removeEventListener("heartlink:presence_update", handlePresenceUpdate);
-  }, [setData]);
-  const visible = useMemo(() => (matches || []).filter((match) => `${match.matchedUser?.name || ""} ${match.matchedUser?.city || ""}`.toLowerCase().includes(search.trim().toLowerCase())), [matches, search]);
-  async function unmatch() {
-    setPending(true);
-    try { await api.delete(`/matches/${encodeURIComponent(confirming.matchId)}`); toast.success("Match removed"); setConfirming(null); await reload(); }
-    catch (requestError) { toast.error(requestError.response?.data?.message || "We could not remove this match."); }
-    finally { setPending(false); }
-  }
-  return <div className="page-content matches-page"><PageHeading eyebrow="A TWO-WAY HELLO" title="Your matches" description="When interest goes both ways, a conversation can begin." action={<Link className="text-link" to="/discover">Discover more <Icon name="arrowRight" size={15} /></Link>} />{error && <ErrorNotice onRetry={reload}>{error}</ErrorNotice>}{loading && !matches ? <PageSpinner label="Finding your matches" /> : matches?.length ? <><section className="matches-ribbon"><div className="ribbon-heading"><span>YOUR PEOPLE</span><strong>{matches.length} {matches.length === 1 ? "match" : "matches"}</strong></div><div className="match-avatar-strip">{matches.map((match) => <button key={match.matchId} type="button" onClick={() => navigate(`/messages/${match.matchId}`)} aria-label={`Message ${match.matchedUser?.name}`}><Avatar person={match.matchedUser} size="md" /><span>{match.matchedUser?.name?.split(" ")[0]}</span></button>)}</div></section><div className="matches-list-head"><div><h2>Keep the conversation going</h2><p>Every good story starts somewhere.</p></div><label className="member-search compact-search"><Icon name="search" size={16} /><input type="search" placeholder="Find a match" aria-label="Search matches" value={search} onChange={(event) => setSearch(event.target.value)} /></label></div><div className="match-list">{visible.map((match) => <article className="match-row" key={match.matchId}><button type="button" className="match-row-main" onClick={() => navigate(`/messages/${match.matchId}`)}><span className="match-row-avatar"><Avatar person={match.matchedUser} size="md" />{match.matchedUser?.online && <i className="online-indicator" />}</span><span className="match-row-copy"><strong>{match.matchedUser?.name}{match.matchedUser?.age ? `, ${match.matchedUser.age}` : ""}</strong><small>{match.lastMessage?.text || "You matched — say hello."}</small></span><span className="match-row-meta">{displayDate(match.lastMessage?.createdAt || match.createdAt)}{match.unreadCount > 0 && <b>{match.unreadCount}</b>}</span></button><button className="match-row-more" aria-label={`More options for ${match.matchedUser?.name}`} type="button" onClick={() => setConfirming(match)}><Icon name="more" size={18} /></button></article>)}</div></> : !error && <EmptyState icon="users" title="Your first match is out there" text="Discover profiles and send a like. A match opens when you both choose to connect." action={<Button to="/discover">Discover people <Icon name="arrowRight" size={15} /></Button>} />}<ConfirmDialog open={Boolean(confirming)} title="Remove this match?" description={`This ends the match with ${confirming?.matchedUser?.name || "this member"}. Their conversation will no longer be available.`} confirmLabel="Remove match" destructive busy={pending} onConfirm={unmatch} onCancel={() => setConfirming(null)} /></div>;
+  }, [loadMatches]);
+
+  const confirmUnmatch = async () => {
+    if (!unmatchTarget) return;
+    setBusy(true);
+    try {
+      await api.delete(`/matches/${unmatchTarget.matchId}`);
+      setMatches((prev) => prev.filter((item) => item.matchId !== unmatchTarget.matchId));
+      refreshProfile?.();
+      toast.success("Unmatched successfully.");
+      setUnmatchTarget(null);
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not unmatch."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <AppShell
+      title="Matches"
+      subtitle="Your mutual connections. Start a chat, send a voice note, or plan your first date."
+    >
+      <PageTransition className="space-y-6">
+        {error && <ErrorNotice message={error} onRetry={loadMatches} />}
+
+        {loading ? (
+          <PageSpinner label="Loading active matches..." />
+        ) : matches.length === 0 ? (
+          <Card>
+            <EmptyState
+              icon={Users}
+              title="No active matches yet"
+              description="When you and another member both like each other, they appear here."
+              action={
+                <Link to="/discover">
+                  <Button size="sm">Explore Discovery</Button>
+                </Link>
+              }
+            />
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {matches.map((match) => {
+              const user = match.matchedUser;
+              if (!user) return null;
+              return (
+                <Card key={match.matchId} variant="interactive" className="flex flex-col justify-between gap-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Avatar
+                        src={user.profilePhoto || user.photos?.[0]}
+                        name={user.name}
+                        size="lg"
+                        online={user.online}
+                        verified={user.isVerified}
+                      />
+                      <div className="min-w-0">
+                        <Link
+                          to={`/profile/${user.id}`}
+                          className="text-sm font-semibold text-base-content hover:underline truncate block"
+                        >
+                          {user.name}
+                          {user.age ? `, ${user.age}` : ""}
+                        </Link>
+                        <p className="text-xs hl-muted-text truncate">
+                          {user.online ? "Online now" : user.city || "Matched"}
+                        </p>
+                      </div>
+                    </div>
+                    {match.unreadCount > 0 && <Badge tone="primary">{match.unreadCount} unread</Badge>}
+                  </div>
+
+                  <p className="text-xs hl-muted-text rounded-lg border hl-subtle-divider bg-base-200/50 p-3 line-clamp-2">
+                    {match.lastMessage?.text || "No messages yet — send an opening note."}
+                  </p>
+
+                  <div className="flex items-center gap-2">
+                    <Link to={`/messages/${match.matchId}`} className="flex-1">
+                      <Button size="sm" fullWidth leftIcon={<MessageSquare className="h-3.5 w-3.5" />}>
+                        Open Chat
+                      </Button>
+                    </Link>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setUnmatchTarget(match)}
+                    >
+                      Unmatch
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </PageTransition>
+
+      <ConfirmDialog
+        open={Boolean(unmatchTarget)}
+        title={`Unmatch ${unmatchTarget?.matchedUser?.name || "member"}?`}
+        message="This will close your shared conversation channel and remove the match from both accounts."
+        confirmLabel="Confirm Unmatch"
+        loading={busy}
+        onCancel={() => setUnmatchTarget(null)}
+        onConfirm={confirmUnmatch}
+      />
+    </AppShell>
+  );
 }

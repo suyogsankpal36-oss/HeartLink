@@ -11,6 +11,39 @@ const mongoose = require('mongoose');
 const { revokeUserSessions } = require('../services/authTokens');
 const { logAdminAction, logSecurityEvent } = require('../services/auditLogger');
 
+// getModeratorOverview — GET /api/v1/admin/moderation/overview
+// Deliberately returns operational report metadata only. Private chat content is never
+// exposed by this dashboard; it may only be reviewed through an explicitly permitted report flow.
+exports.getModeratorOverview = async (req, res) => {
+  try {
+    const [open, inReview, escalated, resolvedToday, recentCases, myActions] = await Promise.all([
+      Report.countDocuments({ status: { $in: ['open', 'pending'] } }),
+      Report.countDocuments({ status: 'under_review' }),
+      Report.countDocuments({ 'escalation.isEscalated': true, status: { $nin: ['resolved', 'dismissed'] } }),
+      Report.countDocuments({ status: 'resolved', updatedAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } }),
+      Report.find({ status: { $in: ['open', 'pending', 'under_review'] } })
+        .sort({ createdAt: -1 })
+        .limit(8)
+        .select('reason status createdAt escalation reportedUser')
+        .populate('reportedUser', 'name role isActive'),
+      AdminAuditLog.find({ adminId: req.userId, action: { $in: ['report_updated', 'report_escalated', 'warning_issued', 'messaging_restricted', 'discovery_restricted', 'user_suspended', 'user_activated'] } })
+        .sort({ createdAt: -1 })
+        .limit(8)
+        .select('action targetId createdAt metadata')
+        .populate('targetId', 'name role'),
+    ]);
+
+    return res.json({
+      stats: { open, inReview, escalated, resolvedToday },
+      recentCases,
+      myActions,
+    });
+  } catch (err) {
+    console.error('[Admin] getModeratorOverview error:', err);
+    return res.status(500).json({ message: 'Failed to load moderation overview.' });
+  }
+};
+
 // getDashboard — GET /api/v1/admin/dashboard
 exports.getDashboard = async (req, res) => {
   try {

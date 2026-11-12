@@ -142,6 +142,22 @@ const userSchema = new mongoose.Schema(
       readReceipts: { type: Boolean, default: true },
       shareApproximateLocation: { type: Boolean, default: true },
     },
+    moderation: {
+      warnings: {
+        type: [{
+          report: { type: mongoose.Schema.Types.ObjectId, ref: "Report" },
+          issuedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+          reason: { type: String, trim: true, maxlength: 80, default: "" },
+          note: { type: String, trim: true, maxlength: 600, default: "" },
+          issuedAt: { type: Date, default: Date.now },
+        }],
+        default: [],
+      },
+      restrictions: {
+        messagingUntil: { type: Date, default: null },
+        discoveryUntil: { type: Date, default: null },
+      },
+    },
     lastActive: {
       type: Date,
       default: Date.now,

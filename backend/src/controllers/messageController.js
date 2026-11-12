@@ -4,6 +4,7 @@ const Message = require("../models/Message");
 const User = require("../models/User");
 const Block = require("../models/Block");
 const Notification = require("../models/Notification");
+const { activeRestrictionUntil, restrictionMessage } = require("../utils/moderation");
 
 exports.getMessages = async (req, res) => {
   try {
@@ -110,6 +111,12 @@ exports.sendMessage = async (req, res) => {
       return res.status(403).json({ message: "Cannot send messages to a blocked user." });
     }
 
+    const senderUser = await User.findById(req.userId).select("name moderation.restrictions");
+    const messagingRestriction = activeRestrictionUntil(senderUser, "messaging");
+    if (messagingRestriction) {
+      return res.status(403).json({ message: restrictionMessage("messaging", messagingRestriction) });
+    }
+
     const newMessage = await Message.create({
       match: matchId,
       sender: req.userId,
@@ -123,8 +130,8 @@ exports.sendMessage = async (req, res) => {
     match.updatedAt = new Date();
     await match.save();
 
-    const [senderUser, receiver] = await Promise.all([
-      User.findById(req.userId).select("name"),
+    const [sender, receiver] = await Promise.all([
+      Promise.resolve(senderUser),
       User.findById(receiverId).select("notificationSettings.messages"),
     ]);
     const messageNotificationsEnabled = receiver?.notificationSettings?.messages !== false;
@@ -134,7 +141,7 @@ exports.sendMessage = async (req, res) => {
         sender: req.userId,
         type: "message",
         title: "New Message 💬",
-        message: `${senderUser?.name || "Your match"} sent you a message.`,
+        message: `${sender?.name || "Your match"} sent you a message.`,
         matchId,
       }).catch((e) => console.warn("Message notification error:", e.message));
     }
@@ -161,8 +168,8 @@ exports.sendMessage = async (req, res) => {
           type: "message",
           matchId,
           senderId: req.userId,
-          senderName: senderUser?.name || "Match",
-          message: `${senderUser?.name || "Your match"} sent you a message.`,
+          senderName: sender?.name || "Match",
+          message: `${sender?.name || "Your match"} sent you a message.`,
         });
       }
     }
@@ -192,6 +199,12 @@ exports.toggleReaction = async (req, res) => {
     const message = await Message.findById(messageId);
     if (!message) {
       return res.status(404).json({ message: "Message not found." });
+    }
+
+    const reactingUser = await User.findById(req.userId).select("moderation.restrictions");
+    const messagingRestriction = activeRestrictionUntil(reactingUser, "messaging");
+    if (messagingRestriction) {
+      return res.status(403).json({ message: restrictionMessage("messaging", messagingRestriction) });
     }
 
     // Verify user is in this match

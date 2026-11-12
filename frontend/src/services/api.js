@@ -7,6 +7,30 @@ if (import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
   console.warn("[HeartLink Production Notice] VITE_API_URL is not set. Ensure VITE_API_URL is configured in your hosting platform environment variables.");
 }
 
+const SESSION_HINT_KEY = "heartlink_session_active";
+
+export function hasSessionHint() {
+  try {
+    return typeof window !== "undefined" && window.localStorage?.getItem(SESSION_HINT_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function setSessionHint(active) {
+  try {
+    if (typeof window === "undefined" || !window.localStorage) return;
+    if (active) window.localStorage.setItem(SESSION_HINT_KEY, "1");
+    else window.localStorage.removeItem(SESSION_HINT_KEY);
+  } catch {
+    // Ignore storage restriction errors in hardened browser contexts
+  }
+}
+
+export async function pingBackend() {
+  await axios.get(`${API_ORIGIN}/api/live`, { timeout: 10000 });
+}
+
 let accessToken = null;
 let refreshToken = null;
 let refreshFlight = null;
@@ -20,7 +44,12 @@ export function onTokenChanged(callback) {
 
 export function setAccessToken(token) {
   accessToken = token || null;
-  if (!token) refreshToken = null;
+  if (!token) {
+    refreshToken = null;
+    setSessionHint(false);
+  } else {
+    setSessionHint(true);
+  }
   tokenListeners.forEach((listener) => {
     try {
       listener(accessToken);

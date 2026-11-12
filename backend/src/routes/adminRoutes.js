@@ -16,6 +16,7 @@ const adminOnly = requireRole('superadmin', 'admin');
 // SUPER_ADMIN only
 const superAdminOnly = requireRole('superadmin');
 
+router.get('/moderation/overview', staffOnly, adminController.getModeratorOverview);
 router.get('/dashboard', adminOnly, adminController.getDashboard);
 router.get('/users', adminOnly, adminController.getUsers);
 router.get('/users/:id', staffOnly, adminController.getUserById);

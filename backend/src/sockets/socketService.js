@@ -15,6 +15,7 @@ const Notification = require("../models/Notification");
 const User = require("../models/User");
 const RefreshSession = require("../models/RefreshSession");
 const { logSecurityEvent } = require("../services/auditLogger");
+const { activeRestrictionUntil, restrictionMessage } = require("../utils/moderation");
 const {
   addOnlineSocket,
   removeOnlineSocket,
@@ -62,6 +63,16 @@ async function socketSessionActive(socket) {
     User.exists({ _id: socket.userId, isActive: { $ne: false } }),
   ]);
   return Boolean(session && user);
+}
+
+async function socketMessagingAllowed(socket, callback) {
+  const account = await User.findById(socket.userId).select("moderation.restrictions");
+  const restriction = activeRestrictionUntil(account, "messaging");
+  if (!restriction) return true;
+  const message = restrictionMessage("messaging", restriction);
+  if (callback) callback({ error: message });
+  else socket.emit("error", { message });
+  return false;
 }
 
 /**
@@ -189,6 +200,8 @@ function initSocket(io) {
           return;
         }
 
+        if (!(await socketMessagingAllowed(socket, callback))) return;
+
         const match = await Match.findOne({
           _id: matchId,
           users: userId,
@@ -279,6 +292,7 @@ function initSocket(io) {
     // Typing indicators
     socket.on("typing", async ({ matchId }) => {
       if (!matchId || !(await socketSessionActive(socket))) return socket.disconnect(true);
+      if (!(await socketMessagingAllowed(socket))) return;
       const match = await Match.findOne({ _id: matchId, users: userId, status: "active" }).select("_id");
       if (match) {
         socket.to(`match_${matchId}`).emit("user_typing", { matchId, userId });
@@ -287,6 +301,7 @@ function initSocket(io) {
 
     socket.on("stop_typing", async ({ matchId }) => {
       if (!matchId || !(await socketSessionActive(socket))) return socket.disconnect(true);
+      if (!(await socketMessagingAllowed(socket))) return;
       const match = await Match.findOne({ _id: matchId, users: userId, status: "active" }).select("_id");
       if (match) {
         socket.to(`match_${matchId}`).emit("user_stop_typing", { matchId, userId });
@@ -327,6 +342,7 @@ function initSocket(io) {
           if (callback) callback({ error: "Session expired. Reconnect and try again." });
           return socket.disconnect(true);
         }
+        if (!(await socketMessagingAllowed(socket, callback))) return;
         const match = await Match.findOne({ _id: matchId, users: userId, status: "active" });
         if (!match) {
           if (callback) callback({ error: "Match not found or access denied." });
@@ -355,6 +371,7 @@ function initSocket(io) {
     socket.on("start_call", async ({ matchId, callType }) => {
       try {
         if (!matchId || !(await socketSessionActive(socket))) return socket.disconnect(true);
+        if (!(await socketMessagingAllowed(socket))) return;
         const match = await Match.findOne({ _id: matchId, users: userId, status: "active" });
         if (!match) return;
         socket.to(`match_${matchId}`).emit("incoming_call", {
@@ -370,6 +387,7 @@ function initSocket(io) {
     socket.on("accept_call", async ({ matchId }) => {
       try {
         if (!matchId || !(await socketSessionActive(socket))) return socket.disconnect(true);
+        if (!(await socketMessagingAllowed(socket))) return;
         const match = await Match.findOne({ _id: matchId, users: userId, status: "active" });
         if (!match) return;
         socket.to(`match_${matchId}`).emit("call_accepted", { matchId });

@@ -1,93 +1,848 @@
-import { useMemo, useState } from "react";
-import { Link, NavLink, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext.jsx";
-import { Avatar, Icon, Logo, PageSpinner } from "./ui.jsx";
+import { useEffect, useState } from "react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import {
+  Bell,
+  CheckCheck,
+  Compass,
+  Crown,
+  Heart,
+  LayoutDashboard,
+  LifeBuoy,
+  LogOut,
+  Menu,
+  MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Settings,
+  Shield,
+  ShieldAlert,
+  SlidersHorizontal,
+  UserCheck,
+  Users,
+  WifiOff,
+} from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { useSocket } from "../context/SocketContext";
+import { api, apiErrorMessage } from "../services/api";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Drawer,
+  Dropdown,
+  IconButton,
+  Logo,
+  PageSpinner,
+  RoleBadge,
+  SearchBar,
+  ThemeToggle,
+} from "./ui";
 
-const publicLinks = [
-  ["Home", "/"], ["About", "/about"], ["Features", "/#features"],
-  ["How it works", "/#how-it-works"], ["FAQ", "/faq"],
+const SIDEBAR_STORAGE_KEY = "hl_member_sidebar_collapsed";
+
+const QUICK_JUMP_ITEMS = [
+  { label: "My Matches & Home", to: "/dashboard", keywords: "home overview stats matches dashboard" },
+  { label: "Discover People", to: "/discover", keywords: "discover swipe feed people date" },
+  { label: "Likes & Admirers", to: "/likes", keywords: "likes admirers superlike heart" },
+  { label: "Mutual Matches", to: "/matches", keywords: "matches connections couples" },
+  { label: "Messages & Chats", to: "/messages", keywords: "chat messages inbox conversation" },
+  { label: "Dating Preferences & Filters", to: "/search", keywords: "filters preferences distance age gender" },
+  { label: "Edit Dating Profile & Photos", to: "/profile/edit", keywords: "profile bio photos prompts gallery" },
+  { label: "Account & Safety Settings", to: "/settings", keywords: "settings privacy security password danger" },
+  { label: "Notifications", to: "/notifications", keywords: "alerts notifications likes matches" },
+  { label: "HeartLink Premium", to: "/premium", keywords: "premium subscription plans membership boost" },
 ];
 
 export function PublicHeader() {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const { user, logout } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
+  const isStaff = user && ["moderator", "admin", "superadmin"].includes(user.role);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  const navLinks = [
+    { label: "About", to: "/about" },
+    { label: "FAQ", to: "/faq" },
+    { label: "Help & Safety", to: "/help" },
+  ];
+
   return (
-    <header className="public-header">
-      <Logo />
-      <nav id="public-navigation" className={`public-links ${menuOpen ? "is-open" : ""}`} aria-label="Main navigation">
-        {publicLinks.map(([label, path]) => <Link key={label} to={path} onClick={() => setMenuOpen(false)}>{label}</Link>)}
-        <Link className="mobile-login-link" to="/login" onClick={() => setMenuOpen(false)}>Log in</Link>
-      </nav>
-      <div className="public-actions"><Link className="login-link" to="/login">Log in</Link><Link to="/signup" className="button button-primary button-small">Create account <Icon name="arrowRight" size={15} /></Link></div>
-      <button className={`menu-toggle ${menuOpen ? "is-open" : ""}`} type="button" aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen} aria-controls="public-navigation" onClick={() => setMenuOpen((open) => !open)}><span /><span /><span /></button>
+    <header className="sticky top-0 z-40 border-b hl-subtle-divider bg-base-100/85 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <Link to="/" className="no-underline shrink-0">
+          <Logo />
+        </Link>
+
+        <nav aria-label="Primary" className="hidden md:flex items-center gap-1">
+          {navLinks.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-primary/10 hl-accent-text"
+                    : "hl-muted-text hover:text-base-content hover:bg-base-300/50"
+                }`
+              }
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="hidden md:flex items-center gap-2.5">
+          <ThemeToggle compact />
+          {user ? (
+            <>
+              {isStaff && (
+                <Link to={user.role === "moderator" ? "/admin/reports" : "/admin/dashboard"}>
+                  <Button variant="outline" size="sm" leftIcon={<Shield className="h-3.5 w-3.5" />}>
+                    {user.role === "moderator" ? "Moderation" : "Admin Console"}
+                  </Button>
+                </Link>
+              )}
+              <Link to="/dashboard">
+                <Button size="sm">Go to App</Button>
+              </Link>
+              <Button variant="ghost" size="sm" onClick={logout}>
+                Sign out
+              </Button>
+            </>
+          ) : (
+            <>
+              <Link to="/admin/login">
+                <Button variant="ghost" size="sm">
+                  Staff Portal
+                </Button>
+              </Link>
+              <Link to="/login">
+                <Button variant="outline" size="sm">
+                  Log in
+                </Button>
+              </Link>
+              <Link to="/signup">
+                <Button size="sm">Join Free</Button>
+              </Link>
+            </>
+          )}
+        </div>
+
+        <div className="flex md:hidden items-center gap-2">
+          <ThemeToggle compact />
+          <IconButton label="Open menu" variant="outline" size="sm" onClick={() => setMobileOpen(true)}>
+            <Menu className="h-4 w-4" strokeWidth={1.75} />
+          </IconButton>
+        </div>
+      </div>
+
+      <Drawer
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        title="Navigation"
+        side="right"
+        widthClass="max-w-xs"
+      >
+        <div className="flex flex-col gap-2">
+          {navLinks.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              onClick={() => setMobileOpen(false)}
+              className="rounded-lg px-3 py-2.5 text-sm font-medium text-base-content hover:bg-base-200"
+            >
+              {item.label}
+            </Link>
+          ))}
+          <div className="my-2 border-t hl-subtle-divider" />
+          <div className="px-2 py-2 flex items-center justify-between">
+            <span className="text-xs font-medium hl-muted-text">Appearance</span>
+            <ThemeToggle showSystem />
+          </div>
+          <div className="my-2 border-t hl-subtle-divider" />
+          {user ? (
+            <div className="flex flex-col gap-2">
+              <Link to="/dashboard" onClick={() => setMobileOpen(false)}>
+                <Button fullWidth>Go to App</Button>
+              </Link>
+              <Button
+                variant="outline"
+                fullWidth
+                onClick={() => {
+                  setMobileOpen(false);
+                  logout();
+                }}
+              >
+                Sign out
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <Link to="/signup" onClick={() => setMobileOpen(false)}>
+                <Button fullWidth>Join Free</Button>
+              </Link>
+              <Link to="/login" onClick={() => setMobileOpen(false)}>
+                <Button variant="outline" fullWidth>
+                  Log In
+                </Button>
+              </Link>
+              <Link to="/admin/login" onClick={() => setMobileOpen(false)}>
+                <Button variant="ghost" fullWidth leftIcon={<Shield className="h-4 w-4" />}>
+                  Staff Portal
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
+      </Drawer>
     </header>
   );
 }
 
 export function PublicFooter() {
+  const { backendAvailable } = useAuth();
+  const year = new Date().getFullYear();
+
   return (
-    <footer className="public-footer">
-      <div className="footer-brand"><Logo /><p>Good people. Better connections.</p></div>
-      <div className="footer-links"><Link to="/about">About</Link><Link to="/help">Support</Link><Link to="/faq">FAQ</Link><Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link></div>
-      <small>© {new Date().getFullYear()} HeartLink. Meet with meaning.</small>
+    <footer className="border-t hl-subtle-divider bg-base-100 mt-auto">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="space-y-3">
+            <Logo />
+            <p className="text-xs hl-muted-text leading-relaxed max-w-xs">
+              Where authentic connections begin. Find meaningful relationships built on shared values, mutual chemistry, and verified safety.
+            </p>
+            <div className="inline-flex items-center gap-2 rounded-full border hl-subtle-divider bg-base-200/70 px-2.5 py-1 text-[11px] font-medium">
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  backendAvailable ? "bg-emerald-500" : "bg-amber-500"
+                }`}
+              />
+              <span className="hl-muted-text">
+                {backendAvailable ? "Live & Ready to Connect" : "Reconnecting to Network..."}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-base-content mb-3">
+              Explore
+            </h3>
+            <ul className="space-y-2 text-xs hl-muted-text">
+              <li>
+                <Link to="/signup" className="hover:text-base-content transition-colors">
+                  Join Free
+                </Link>
+              </li>
+              <li>
+                <Link to="/login" className="hover:text-base-content transition-colors">
+                  Log In
+                </Link>
+              </li>
+              <li>
+                <Link to="/premium" className="hover:text-base-content transition-colors">
+                  HeartLink Premium
+                </Link>
+              </li>
+              <li>
+                <Link to="/admin/login" className="hover:text-base-content transition-colors">
+                  Staff &amp; Admin Portal
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-base-content mb-3">
+              About
+            </h3>
+            <ul className="space-y-2 text-xs hl-muted-text">
+              <li>
+                <Link to="/about" className="hover:text-base-content transition-colors">
+                  Our Story
+                </Link>
+              </li>
+              <li>
+                <Link to="/faq" className="hover:text-base-content transition-colors">
+                  Dating FAQ
+                </Link>
+              </li>
+              <li>
+                <Link to="/help" className="hover:text-base-content transition-colors">
+                  Dating Safety Tips
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-base-content mb-3">
+              Safety &amp; Legal
+            </h3>
+            <ul className="space-y-2 text-xs hl-muted-text">
+              <li>
+                <Link to="/privacy" className="hover:text-base-content transition-colors">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms" className="hover:text-base-content transition-colors">
+                  Terms of Service
+                </Link>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-10 flex flex-col sm:flex-row items-center justify-between gap-4 border-t hl-subtle-divider pt-6 text-xs hl-muted-text">
+          <p>&copy; {year} HeartLink Dating. Certified Adults 18+ Only.</p>
+          <ThemeToggle showSystem />
+        </div>
+      </div>
     </footer>
   );
 }
 
-function SideLink({ item, close }) {
-  return <NavLink to={item.to} onClick={close} className={({ isActive }) => `side-link ${isActive ? "active" : ""}`}><Icon name={item.icon} size={18} /><span>{item.label}</span>{item.badge > 0 && <b>{item.badge}</b>}</NavLink>;
+export function PublicPage({ children }) {
+  return (
+    <div className="min-h-dvh flex flex-col bg-base-200 text-base-content">
+      <PublicHeader />
+      <main className="flex-1">{children}</main>
+      <PublicFooter />
+    </div>
+  );
 }
 
-export function AppShell({ children }) {
-  const { user, stats, logout } = useAuth();
-  const location = useLocation();
+function NotificationPopover() {
+  const { stats, refreshProfile } = useAuth();
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
-  const [mobileMore, setMobileMore] = useState(false);
-  const [search, setSearch] = useState(new URLSearchParams(location.search).get("search") || "");
-  const isStaff = ["superadmin", "admin", "moderator"].includes(user?.role);
-  const adminHome = user?.role === "moderator" ? "/admin/notifications" : "/admin/dashboard";
 
-  const navigationItems = useMemo(() => [
-    { label: "Discover", to: "/discover", icon: "compass" },
-    { label: "Likes", to: "/likes", icon: "heart", badge: stats?.likesReceivedCount || 0 },
-    { label: "Matches", to: "/matches", icon: "users", badge: stats?.matchesCount || 0 },
-    { label: "Messages", to: "/messages", icon: "message" },
-  ], [stats]);
+  const loadRecent = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const { data } = await api.get("/notifications");
+      setItems((data.notifications || []).slice(0, 6));
+    } catch (err) {
+      setError(apiErrorMessage(err, "Unable to fetch alerts."));
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  function submitSearch(event) {
-    event.preventDefault();
-    const query = search.trim();
-    navigate(query ? `/discover?search=${encodeURIComponent(query)}` : "/discover");
-  }
+  const handleMarkAll = async (e) => {
+    e.stopPropagation();
+    try {
+      await api.patch("/notifications/read-all");
+      setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+      refreshProfile?.();
+    } catch {
+      // silent fallback
+    }
+  };
 
-  async function signOut() {
-    await logout();
-    navigate("/login", { replace: true });
-  }
+  const unread = Number(stats?.unreadNotificationsCount || 0);
 
   return (
-    <div className="member-app">
-      <aside className="sidebar" aria-label="Member navigation">
-        <Logo />
-        <div className="side-section"><span className="side-label">YOUR HEARTLINK</span><nav className="side-nav">{navigationItems.map((item) => <SideLink key={item.to} item={item} />)}<SideLink item={{ label: "My profile", to: "/profile/edit", icon: "user" }} /></nav></div>
-        <div className="side-section"><span className="side-label">YOUR SPACE</span><nav className="side-nav"><SideLink item={{ label: "Premium", to: "/premium", icon: "star" }} /><SideLink item={{ label: "Settings", to: "/settings", icon: "settings" }} /><SideLink item={{ label: "Help & support", to: "/help", icon: "help" }} /></nav></div>
-        {isStaff && <div className="side-section"><span className="side-label">TEAM TOOLS</span><nav className="side-nav"><SideLink item={{ label: user?.role === "superadmin" ? "Super Admin" : "Admin panel", to: adminHome, icon: "star" }} /><SideLink item={{ label: "Reports", to: "/admin/reports", icon: "shield" }} /><SideLink item={{ label: "Support queue", to: "/admin/support", icon: "message" }} /></nav></div>}
-        <Link to="/premium" className="sidebar-promo"><span><Icon name="star" size={16} /> A little more discovery</span><strong>Meet people who fit <i>your way.</i></strong><span className="promo-link">Explore Premium <Icon name="arrowRight" size={14} /></span></Link>
-        <button className="sidebar-account" type="button" onClick={() => navigate("/profile/edit")}><Avatar person={user} size="sm" /><span><strong>{user?.name || "Your account"}</strong><small>View your profile</small></span><Icon name="chevronRight" size={16} /></button>
+    <Dropdown
+      align="right"
+      widthClass="w-80 sm:w-96"
+      trigger={({ toggle }) => (
+        <button
+          type="button"
+          onClick={() => {
+            toggle();
+            loadRecent();
+          }}
+          aria-label="Notifications"
+          className="relative btn btn-ghost btn-sm h-9 w-9 p-0 rounded-lg border border-base-300/80 bg-base-100/80 hover:bg-base-300/60"
+        >
+          <Bell className="h-4 w-4" strokeWidth={1.75} />
+          {unread > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white hl-tabular">
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
+        </button>
+      )}
+    >
+      {({ close }) => (
+        <div className="flex flex-col">
+          <div className="flex items-center justify-between px-3 py-2 border-b hl-subtle-divider">
+            <span className="text-xs font-semibold uppercase tracking-wider text-base-content">
+              Notifications
+            </span>
+            {unread > 0 && (
+              <button
+                type="button"
+                onClick={handleMarkAll}
+                className="inline-flex items-center gap-1 text-[11px] font-medium hl-accent-text hover:underline cursor-pointer"
+              >
+                <CheckCheck className="h-3.5 w-3.5" />
+                Mark all read
+              </button>
+            )}
+          </div>
+          <div className="max-h-72 overflow-y-auto divide-y divide-base-300/50">
+            {loading ? (
+              <div className="p-4 text-center text-xs hl-muted-text">Loading notifications...</div>
+            ) : error ? (
+              <div className="p-4 text-center text-xs text-error">{error}</div>
+            ) : items.length === 0 ? (
+              <div className="p-6 text-center text-xs hl-muted-text">
+                No notifications yet.
+              </div>
+            ) : (
+              items.map((n) => (
+                <button
+                  key={n.id || n._id}
+                  type="button"
+                  onClick={() => {
+                    close();
+                    navigate(n.matchId ? `/messages/${n.matchId}` : "/notifications");
+                  }}
+                  className={`w-full text-left px-3 py-2.5 hover:bg-base-200/70 transition-colors flex items-start gap-2.5 cursor-pointer ${
+                    !n.read ? "bg-primary/5" : ""
+                  }`}
+                >
+                  <Avatar src={n.sender?.profilePhoto} name={n.sender?.name || "H"} size="xs" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-base-content truncate">{n.title || "Activity update"}</p>
+                    <p className="text-[11px] hl-muted-text line-clamp-2">{n.message}</p>
+                  </div>
+                  {!n.read && <span className="h-2 w-2 rounded-full bg-rose-500 mt-1 shrink-0" />}
+                </button>
+              ))
+            )}
+          </div>
+          <Link
+            to="/notifications"
+            onClick={close}
+            className="border-t hl-subtle-divider px-3 py-2 text-center text-xs font-medium hl-accent-text hover:bg-base-200/50 rounded-b-lg"
+          >
+            View all notifications
+          </Link>
+        </div>
+      )}
+    </Dropdown>
+  );
+}
+
+export function AppShell({ title = "", subtitle = "", actions = null, fullHeight = false, children }) {
+  const { user, stats, logout, backendAvailable, checkConnection } = useAuth();
+  const { isConnected } = useSocket();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [quickQuery, setQuickQuery] = useState("");
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  const toggleCollapsed = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    try {
+      localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  const role = user?.role || "member";
+  const isStaff = ["moderator", "admin", "superadmin"].includes(role);
+  const isAdmin = ["admin", "superadmin"].includes(role);
+
+  const primaryNav = [
+    { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
+    { label: "Discover", to: "/discover", icon: Compass },
+    {
+      label: "Likes",
+      to: "/likes",
+      icon: Heart,
+      badge: stats?.likesReceivedCount > 0 ? stats.likesReceivedCount : null,
+    },
+    {
+      label: "Matches",
+      to: "/matches",
+      icon: Users,
+      badge: stats?.matchesCount > 0 ? stats.matchesCount : null,
+    },
+    { label: "Messages", to: "/messages", icon: MessageSquare },
+  ];
+
+  const accountNav = [
+    { label: "Discovery Filters", to: "/search", icon: SlidersHorizontal },
+    { label: "Edit Profile", to: "/profile/edit", icon: UserCheck },
+    {
+      label: "Notifications",
+      to: "/notifications",
+      icon: Bell,
+      badge: stats?.unreadNotificationsCount > 0 ? stats.unreadNotificationsCount : null,
+    },
+    { label: "Membership", to: "/premium", icon: Crown },
+    { label: "Settings", to: "/settings", icon: Settings },
+  ];
+
+  const staffNav = isStaff
+    ? [
+        { label: "Report Queue", to: "/admin/reports", icon: ShieldAlert },
+        { label: "Support Queue", to: "/admin/support", icon: LifeBuoy },
+        ...(isAdmin ? [{ label: "Admin Console", to: "/admin/dashboard", icon: Shield }] : []),
+      ]
+    : [];
+
+  const filteredQuickJump = quickQuery.trim()
+    ? QUICK_JUMP_ITEMS.filter((item) =>
+        `${item.label} ${item.keywords}`.toLowerCase().includes(quickQuery.trim().toLowerCase()),
+      )
+    : [];
+
+  const renderNavSection = (label, items, isCompact = false, onNavigate = null) => (
+    <div className="space-y-1">
+      {!isCompact && (
+        <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest hl-muted-text">
+          {label}
+        </p>
+      )}
+      {items.map((item) => {
+        const IconComp = item.icon;
+        return (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            onClick={onNavigate || undefined}
+            title={isCompact ? item.label : undefined}
+            className={({ isActive }) =>
+              `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                isCompact ? "justify-center px-2" : ""
+              } ${
+                isActive
+                  ? "bg-primary/12 hl-accent-text border border-primary/20"
+                  : "hl-muted-text hover:text-base-content hover:bg-base-300/50 border border-transparent"
+              }`
+            }
+          >
+            <IconComp className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+            {!isCompact && <span className="truncate flex-1">{item.label}</span>}
+            {!isCompact && item.badge && (
+              <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold hl-accent-text hl-tabular">
+                {item.badge}
+              </span>
+            )}
+          </NavLink>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <div className="min-h-dvh flex bg-base-200 text-base-content">
+      {/* Desktop Sidebar */}
+      <aside
+        aria-label="Workspace sidebar"
+        className={`hidden md:flex flex-col shrink-0 border-r hl-subtle-divider bg-base-100 sticky top-0 h-dvh transition-all duration-200 ${
+          collapsed ? "w-[72px]" : "w-64"
+        }`}
+      >
+        <div className={`h-16 flex items-center border-b hl-subtle-divider px-4 ${collapsed ? "justify-center" : "justify-between"}`}>
+          <Link to="/dashboard" className="no-underline">
+            <Logo compact={collapsed} />
+          </Link>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
+          {renderNavSection("Dating & Matches", primaryNav, collapsed)}
+          {renderNavSection("My Profile & Preferences", accountNav, collapsed)}
+          {staffNav.length > 0 && renderNavSection("Safety & Moderation", staffNav, collapsed)}
+        </div>
+
+        <div className="border-t hl-subtle-divider p-3">
+          <Link
+            to="/profile/edit"
+            className={`flex items-center gap-2.5 rounded-lg p-2 hover:bg-base-200 transition-colors ${
+              collapsed ? "justify-center" : ""
+            }`}
+          >
+            <Avatar
+              src={user?.profilePhoto || user?.photos?.[0]}
+              name={user?.name}
+              size="sm"
+              online={isConnected}
+            />
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-base-content truncate">{user?.name || "Member"}</p>
+                <p className="text-[11px] hl-muted-text truncate">{user?.city || user?.email}</p>
+              </div>
+            )}
+          </Link>
+        </div>
       </aside>
 
-      <div className="member-workspace">
-        <header className="member-topbar">
-          <form className="global-search" onSubmit={submitSearch} role="search"><Icon name="search" size={17} /><input aria-label="Search people, interests, or locations" placeholder="Search people, interests, or places" value={search} onChange={(event) => setSearch(event.target.value)} /><button type="submit" aria-label="Search"><Icon name="arrowRight" size={16} /></button></form>
-          <div className="topbar-actions"><Link to="/premium" className="top-premium"><Icon name="star" size={15} /> Upgrade</Link><Link to="/notifications" className={`top-icon ${location.pathname === "/notifications" ? "active" : ""}`} aria-label="Notifications"><Icon name="bell" size={19} />{stats?.unreadNotificationsCount > 0 && <span className="notification-badge">{stats.unreadNotificationsCount > 99 ? "99+" : stats.unreadNotificationsCount}</span>}</Link><Link to="/profile/edit" className="top-user" aria-label="Edit your profile"><Avatar person={user} size="sm" /></Link></div>
+      {/* Main Column */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {!backendAvailable && (
+          <div
+            role="alert"
+            className="bg-warning/15 border-b border-warning/30 px-4 py-2 text-xs flex items-center justify-between gap-2"
+          >
+            <span className="font-medium text-base-content">
+              API connection interrupted. Some updates may pause until connection restores.
+            </span>
+            <Button size="xs" variant="outline" onClick={checkConnection}>
+              Retry
+            </Button>
+          </div>
+        )}
+
+        {/* Topbar */}
+        <header className="sticky top-0 z-30 h-16 border-b hl-subtle-divider bg-base-100/85 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <IconButton
+              label="Open navigation drawer"
+              variant="ghost"
+              size="sm"
+              className="md:hidden"
+              onClick={() => setMobileMenuOpen(true)}
+            >
+              <Menu className="h-5 w-5" strokeWidth={1.75} />
+            </IconButton>
+
+            <IconButton
+              label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              variant="ghost"
+              size="sm"
+              className="hidden md:inline-flex"
+              onClick={toggleCollapsed}
+            >
+              {collapsed ? (
+                <PanelLeftOpen className="h-4 w-4" strokeWidth={1.75} />
+              ) : (
+                <PanelLeftClose className="h-4 w-4" strokeWidth={1.75} />
+              )}
+            </IconButton>
+
+            <div className="relative hidden sm:block w-full max-w-xs lg:max-w-sm">
+              <SearchBar
+                value={quickQuery}
+                onChange={(e) => setQuickQuery(e.target.value)}
+                onClear={() => setQuickQuery("")}
+                placeholder="Jump to discover, matches, chats..."
+                label="Quick jump navigation"
+              />
+              {filteredQuickJump.length > 0 && (
+                <div className="absolute left-0 right-0 top-11 z-50 rounded-xl border border-base-300 bg-base-100 p-1.5 shadow-xl">
+                  {filteredQuickJump.map((item) => (
+                    <button
+                      key={item.to}
+                      type="button"
+                      onClick={() => {
+                        setQuickQuery("");
+                        navigate(item.to);
+                      }}
+                      className="w-full text-left rounded-lg px-3 py-2 text-xs font-medium text-base-content hover:bg-base-200 flex items-center justify-between cursor-pointer"
+                    >
+                      <span>{item.label}</span>
+                      <span className="hl-muted-text text-[11px]">{item.to}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {!isConnected && (
+              <Badge tone="warning" className="hidden sm:inline-flex">
+                <WifiOff className="h-3 w-3" />
+                Live offline
+              </Badge>
+            )}
+
+            <ThemeToggle compact />
+            <NotificationPopover />
+
+            <Dropdown
+              align="right"
+              widthClass="w-60"
+              trigger={({ toggle }) => (
+                <button
+                  type="button"
+                  onClick={toggle}
+                  aria-label="User account menu"
+                  className="inline-flex items-center gap-2 rounded-lg border border-base-300/80 bg-base-100 px-2 py-1 hover:bg-base-200 transition-colors cursor-pointer"
+                >
+                  <Avatar src={user?.profilePhoto || user?.photos?.[0]} name={user?.name} size="xs" />
+                  <span className="hidden lg:inline text-xs font-medium text-base-content max-w-28 truncate">
+                    {user?.name}
+                  </span>
+                </button>
+              )}
+            >
+              {({ close }) => (
+                <div className="flex flex-col text-xs">
+                  <div className="px-3 py-2.5 border-b hl-subtle-divider space-y-1">
+                    <p className="font-semibold text-base-content truncate">{user?.name}</p>
+                    <p className="hl-muted-text truncate">{user?.email}</p>
+                    <RoleBadge role={role} />
+                  </div>
+                  <div className="py-1">
+                    <Link
+                      to="/dashboard"
+                      onClick={close}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-base-200 text-base-content"
+                    >
+                      <LayoutDashboard className="h-3.5 w-3.5" />
+                      Dashboard
+                    </Link>
+                    <Link
+                      to="/profile/edit"
+                      onClick={close}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-base-200 text-base-content"
+                    >
+                      <UserCheck className="h-3.5 w-3.5" />
+                      Edit Profile
+                    </Link>
+                    <Link
+                      to="/settings"
+                      onClick={close}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-base-200 text-base-content"
+                    >
+                      <Settings className="h-3.5 w-3.5" />
+                      Account Settings
+                    </Link>
+                    {isStaff && (
+                      <Link
+                        to={isAdmin ? "/admin/dashboard" : "/admin/reports"}
+                        onClick={close}
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-base-200 hl-accent-text font-medium"
+                      >
+                        <Shield className="h-3.5 w-3.5" />
+                        {isAdmin ? "Admin Console" : "Moderation Queue"}
+                      </Link>
+                    )}
+                  </div>
+                  <div className="border-t hl-subtle-divider pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        close();
+                        logout();
+                      }}
+                      className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left text-error hover:bg-error/10 cursor-pointer"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      Sign out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </Dropdown>
+          </div>
         </header>
-        <main className="member-content" key={location.pathname}>{children}</main>
+
+        {/* Page Content */}
+        <main
+          className={
+            fullHeight
+              ? "flex-1 flex flex-col min-h-0 pb-16 md:pb-0"
+              : "flex-1 px-4 py-6 sm:px-6 lg:px-8 max-w-7xl w-full mx-auto pb-24 md:pb-10"
+          }
+        >
+          {(title || actions) && !fullHeight && (
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-5 mb-6 border-b hl-subtle-divider">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-base-content">
+                  {title}
+                </h1>
+                {subtitle && <p className="text-sm hl-muted-text mt-1">{subtitle}</p>}
+              </div>
+              {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
+            </div>
+          )}
+          {children}
+        </main>
       </div>
 
-      <nav className="mobile-bottom-nav" aria-label="Member navigation">
-        {navigationItems.map((item) => <NavLink key={item.to} to={item.to} className={({ isActive }) => `mobile-nav-link ${isActive ? "active" : ""}`}><Icon name={item.icon} size={19} /><span>{item.label}</span></NavLink>)}
-        <button className={`mobile-nav-link ${mobileMore ? "active" : ""}`} type="button" aria-expanded={mobileMore} onClick={() => setMobileMore((open) => !open)}><Icon name="more" size={20} /><span>More</span></button>
+      {/* Mobile Bottom Navigation */}
+      <nav
+        aria-label="Mobile quick navigation"
+        className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t hl-subtle-divider bg-base-100/95 backdrop-blur-md px-2 py-1.5 flex items-center justify-around"
+      >
+        {[
+          { label: "Home", to: "/dashboard", icon: LayoutDashboard },
+          { label: "Discover", to: "/discover", icon: Compass },
+          { label: "Likes", to: "/likes", icon: Heart, badge: stats?.likesReceivedCount },
+          { label: "Messages", to: "/messages", icon: MessageSquare },
+          { label: "Settings", to: "/settings", icon: Settings },
+        ].map((item) => {
+          const IconComp = item.icon;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `relative flex flex-col items-center gap-0.5 rounded-lg px-2.5 py-1 text-[11px] font-medium ${
+                  isActive ? "hl-accent-text" : "hl-muted-text"
+                }`
+              }
+            >
+              <IconComp className="h-4 w-4" strokeWidth={1.75} />
+              <span>{item.label}</span>
+              {item.badge > 0 && (
+                <span className="absolute top-0.5 right-1.5 h-2 w-2 rounded-full bg-rose-500" />
+              )}
+            </NavLink>
+          );
+        })}
       </nav>
-      {mobileMore && <div className="mobile-more-menu"><Link to="/profile/edit" onClick={() => setMobileMore(false)}><Icon name="user" /> My profile</Link><Link to="/premium" onClick={() => setMobileMore(false)}><Icon name="star" /> Premium</Link><Link to="/settings" onClick={() => setMobileMore(false)}><Icon name="settings" /> Settings</Link><Link to="/help" onClick={() => setMobileMore(false)}><Icon name="help" /> Help & support</Link>{isStaff && <Link to={adminHome} onClick={() => setMobileMore(false)}><Icon name="shield" /> Admin panel</Link>}<button type="button" onClick={signOut}><Icon name="logout" /> Log out</button></div>}
+
+      {/* Mobile Navigation Drawer */}
+      <Drawer
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        title="HeartLink Menu"
+        subtitle={user?.email}
+        side="left"
+        widthClass="max-w-xs"
+      >
+        <div className="space-y-4">
+          {renderNavSection("Dating & Matches", primaryNav, false, () => setMobileMenuOpen(false))}
+          {renderNavSection("My Profile & Preferences", accountNav, false, () => setMobileMenuOpen(false))}
+          {staffNav.length > 0 && renderNavSection("Safety & Moderation", staffNav, false, () => setMobileMenuOpen(false))}
+          <div className="border-t hl-subtle-divider pt-3 flex items-center justify-between px-2">
+            <span className="text-xs font-medium hl-muted-text">Theme</span>
+            <ThemeToggle showSystem />
+          </div>
+          <Button
+            variant="soft-danger"
+            fullWidth
+            leftIcon={<LogOut className="h-4 w-4" />}
+            onClick={() => {
+              setMobileMenuOpen(false);
+              logout();
+            }}
+          >
+            Sign out
+          </Button>
+        </div>
+      </Drawer>
     </div>
   );
 }
@@ -95,11 +850,26 @@ export function AppShell({ children }) {
 export function RequireMember({ children }) {
   const { user, authLoading } = useAuth();
   const location = useLocation();
-  if (authLoading) return <PageSpinner label="Checking your account" />;
-  if (!user) return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />;
-  return <AppShell>{children}</AppShell>;
+
+  if (authLoading) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center bg-base-200">
+        <PageSpinner label="Verifying your session..." />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LinkRedirectToLogin from={location.pathname} />;
+  }
+
+  return children;
 }
 
-export function PublicPage({ children, className = "" }) {
-  return <div className={`public-page ${className}`}><PublicHeader />{children}<PublicFooter /></div>;
+function LinkRedirectToLogin({ from }) {
+  const navigate = useNavigate();
+  useEffect(() => {
+    navigate("/login", { replace: true, state: { from } });
+  }, [navigate, from]);
+  return null;
 }

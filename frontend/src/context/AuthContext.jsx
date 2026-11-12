@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { api, refreshSession, setAccessToken, setRefreshToken, setSessionExpiredHandler } from "../services/api";
+import { api, hasSessionHint, pingBackend, refreshSession, setAccessToken, setRefreshToken, setSessionExpiredHandler } from "../services/api";
 
 const AuthContext = createContext(null);
 
@@ -33,6 +33,14 @@ export function AuthProvider({ children }) {
 
   const checkConnection = useCallback(async () => {
     try {
+      if (!hasSessionHint()) {
+        await pingBackend()
+          .then(() => setBackendAvailable(true))
+          .catch((err) => {
+            if (err?.code === "ERR_NETWORK" || !err?.response) setBackendAvailable(false);
+          });
+        return;
+      }
       const session = await refreshSession().catch((err) => {
         if (err?.code === "ERR_NETWORK" || !err?.response) {
           setBackendAvailable(false);
@@ -59,6 +67,20 @@ export function AuthProvider({ children }) {
 
     async function restoreSession() {
       try {
+        if (!hasSessionHint()) {
+          await pingBackend()
+            .then(() => {
+              if (active) setBackendAvailable(true);
+            })
+            .catch((err) => {
+              if (active && (err?.code === "ERR_NETWORK" || !err?.response)) {
+                setBackendAvailable(false);
+              }
+            });
+          if (active) clearSession();
+          return;
+        }
+
         const session = await refreshSession().catch((err) => {
           if (err?.code === "ERR_NETWORK" || !err?.response) {
             if (active) setBackendAvailable(false);

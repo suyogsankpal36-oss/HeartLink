@@ -3,12 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#090b10" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="theme-color" content="#fff6f8" />
-    <meta name="description" content="Meet with intention. HeartLink helps adults discover people, shared interests, and conversations that feel real." />
-    <title>HeartLink — Meet with meaning</title>
+    <meta name="description" content="Meet with intention. HeartLink helps adults discover people, shared interests, and real-time conversations with enterprise-grade privacy and safety." />
+    <title>HeartLink — Intentional Connections</title>
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("hl_admin_theme") || "dark";
+          var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var resolved = stored === "system" ? (prefersDark ? "dark" : "light") : (stored === "light" || stored === "dark" ? stored : (prefersDark ? "dark" : "light"));
+          var root = document.documentElement;
+          root.setAttribute("data-theme", resolved);
+          var csMeta = document.querySelector('meta[name="color-scheme"]');
+          if (csMeta) csMeta.setAttribute("content", stored === "system" ? "light dark" : resolved);
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body>
+  <body class="antialiased bg-base-200 text-base-content">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

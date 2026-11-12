@@ -43,6 +43,27 @@ const reportSchema = new mongoose.Schema(
       enum: ["open", "pending", "under_review", "reviewed", "resolved", "dismissed"],
       default: "open",
     },
+    moderationHistory: {
+      type: [{
+        actor: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+        action: {
+          type: String,
+          enum: ["status_updated", "warned", "messaging_restricted", "discovery_restricted", "suspended", "reactivated", "escalated"],
+          required: true,
+        },
+        note: { type: String, trim: true, maxlength: 600, default: "" },
+        restrictionUntil: { type: Date, default: null },
+        createdAt: { type: Date, default: Date.now },
+      }],
+      default: [],
+    },
+    escalation: {
+      isEscalated: { type: Boolean, default: false },
+      targetRole: { type: String, enum: ["admin", "superadmin"], default: null },
+      reason: { type: String, trim: true, maxlength: 600, default: "" },
+      escalatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+      escalatedAt: { type: Date, default: null },
+    },
   },
   { timestamps: true }
 );

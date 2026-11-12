@@ -9,6 +9,14 @@ const { calculateAge } = require("../utils/adultPolicy");
 const { INTEREST_SET } = require("../utils/interests");
 const { isEmailVerificationComplete } = require("../utils/emailVerification");
 const { logActivity } = require("../services/auditLogger");
+const { activeRestrictionUntil, restrictionMessage } = require("../utils/moderation");
+
+function rejectRestrictedDiscovery(res, user) {
+  const restrictedUntil = activeRestrictionUntil(user, "discovery");
+  if (!restrictedUntil) return false;
+  res.status(403).json({ message: restrictionMessage("discovery", restrictedUntil) });
+  return true;
+}
 
 function calculateCompatibility(currentUser, targetUser) {
   if (!currentUser || !targetUser) return 75;
@@ -117,6 +125,7 @@ exports.getDiscoveryFeed = async (req, res) => {
     } = req.query;
 
     const currentUser = await User.findById(req.userId);
+    if (rejectRestrictedDiscovery(res, currentUser)) return;
     if (gender !== undefined && !["all", "male", "female", "non-binary", "other"].includes(gender)) return res.status(400).json({ message: "Invalid gender filter." });
     if (lookingFor !== undefined && !["all", "relationship", "friendship", "casual"].includes(lookingFor)) return res.status(400).json({ message: "Invalid dating intent filter." });
 
@@ -301,6 +310,7 @@ exports.swipeLike = async (req, res) => {
       User.findById(req.userId),
       User.findById(targetUserId),
     ]);
+    if (rejectRestrictedDiscovery(res, currentUser)) return;
     if (
       !targetUser ||
       targetUser.isActive === false ||
@@ -309,6 +319,12 @@ exports.swipeLike = async (req, res) => {
       !isEmailVerificationComplete(targetUser)
     ) {
       return res.status(404).json({ message: "Target user not found." });
+    }
+    if (comment) {
+      const messagingRestriction = activeRestrictionUntil(currentUser, "messaging");
+      if (messagingRestriction) {
+        return res.status(403).json({ message: restrictionMessage("messaging", messagingRestriction) });
+      }
     }
 
     // Check if target user has already liked the current user (e.g. from the Likes tab)
@@ -493,6 +509,8 @@ exports.swipePass = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(targetUserId)) {
       return res.status(400).json({ message: "Invalid user ID format." });
     }
+    const currentUser = await User.findById(req.userId).select("moderation.restrictions");
+    if (rejectRestrictedDiscovery(res, currentUser)) return;
 
     await Like.findOneAndUpdate(
       { fromUser: req.userId, toUser: targetUserId },
@@ -509,6 +527,8 @@ exports.swipePass = async (req, res) => {
 
 exports.rewindSwipe = async (req, res) => {
   try {
+    const currentUser = await User.findById(req.userId);
+    if (rejectRestrictedDiscovery(res, currentUser)) return;
     // Find the most recent 'pass' like by this user
     const lastPass = await Like.findOne({
       fromUser: req.userId,
@@ -524,8 +544,6 @@ exports.rewindSwipe = async (req, res) => {
     const targetUser = await User.findById(lastPass.toUser);
     await Like.findByIdAndDelete(lastPass._id);
 
-    const currentUser = await User.findById(req.userId);
-
     return res.json({
       success: true,
       message: `Rewound ${targetUser?.name || "profile"}!`,
@@ -539,6 +557,8 @@ exports.rewindSwipe = async (req, res) => {
 
 exports.resetPasses = async (req, res) => {
   try {
+    const currentUser = await User.findById(req.userId).select("moderation.restrictions");
+    if (rejectRestrictedDiscovery(res, currentUser)) return;
     // 1. Delete all passes
     const passResult = await Like.deleteMany({
       fromUser: req.userId,

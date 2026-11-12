@@ -1,113 +1,429 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { toast } from "react-hot-toast";
-import { useAuth } from "../context/AuthContext.jsx";
-import { api, apiErrorMessage } from "../services/api.js";
-import { firebaseConfigured, getGoogleIdToken } from "../services/firebase.js";
-import { Button, EmptyState, Field, Icon, Logo, PageHeading } from "../components/ui.jsx";
-import { PublicPage } from "../components/Layout.jsx";
+import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  Compass,
+  Heart,
+  HelpCircle,
+  Lock,
+  Mail,
+  MessageSquare,
+  Shield,
+  ShieldCheck,
+  Sparkles,
+  UserCheck,
+  Users,
+} from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { api, apiErrorMessage } from "../services/api";
+import { firebaseConfigured, getGoogleIdToken } from "../services/firebase";
+import { PublicPage } from "../components/Layout";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  FadeInView,
+  Field,
+  Logo,
+  PageHeader,
+  PageTransition,
+  SearchBar,
+  Select,
+  TextArea,
+} from "../components/ui";
 
-function ageOn(dateValue) {
-  if (!dateValue) return 0;
-  const birth = new Date(`${dateValue}T00:00:00`);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const monthDiff = today.getMonth() - birth.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age -= 1;
+const FAQ_ITEMS = [
+  [
+    "How does compatibility scoring work on HeartLink?",
+    "HeartLink calculates compatibility using shared interests, dating goals (long-term relationship, casual dating, or friendship), and lifestyle preferences you choose on your profile.",
+  ],
+  [
+    "How is my privacy and location protected?",
+    "Your email address and exact birthdate are never displayed publicly. Your location is strictly approximate, and you have complete control to pause discovery, toggle online status, or block anyone anytime.",
+  ],
+  [
+    "Who can see my messages and chat with me?",
+    "Conversations unlock exclusively when both people like each other. That means no unsolicited spam or uninvited messages—just genuine conversations between mutual matches.",
+  ],
+  [
+    "How does HeartLink keep the community safe?",
+    "Every member can easily block or report any profile or message. Our dedicated moderation team reviews safety reports promptly to keep HeartLink respectful, authentic, and safe.",
+  ],
+  [
+    "How many photos can I add to my profile?",
+    "You can upload up to 6 high-quality gallery photos to showcase your genuine smile, passions, and everyday moments with automatic privacy and safety checks.",
+  ],
+  [
+    "Can I switch themes or delete my account?",
+    "Yes! You can switch between Light and Dark mode anytime. If you ever find your special someone or need a break, you can easily pause or permanently delete your account in Settings.",
+  ],
+];
+
+function calculateAgeFromIso(dob) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dob || "");
+  if (!match) return 0;
+  const [, yearText, monthText, dayText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText) - 1;
+  const day = Number(dayText);
+  const now = new Date();
+  let age = now.getFullYear() - year;
+  const beforeBirthday =
+    now.getMonth() < month || (now.getMonth() === month && now.getDate() < day);
+  if (beforeBirthday) age -= 1;
   return age;
 }
 
-const faqItems = [
-  ["Who can join HeartLink?", "HeartLink is for adults aged 18 and over. We ask for a date of birth to confirm eligibility; the exact date is not shown on your public profile."],
-  ["How does matching work?", "You can like a profile or pass. A conversation becomes available after both people have liked each other."],
-  ["Are my photos public?", "Photos you add are shown on your profile to other eligible members. You can update or remove them from Edit profile."],
-  ["How do I keep my account safe?", "You can block or report a member from their profile. Never share financial details or private verification codes with another person."],
-  ["Can I delete my account?", "Yes. Open Settings, choose Delete account, and confirm. The request removes your account and associated app records."],
-  ["Is Premium checkout available?", "Plans and prices are displayed from the server, but checkout is not enabled in this version. No payment will be taken."],
-  ["How do I contact support?", "Use the Support page to send a request. Please include enough detail for the team to understand the issue, and avoid sharing passwords."],
-];
-
 export function LandingPage() {
+  const { user } = useAuth();
+
   return (
-    <PublicPage className="landing-page">
-      <main>
-        <section className="hero-wrap">
-          <div className="hero-copy">
-            <span className="hero-kicker"><Icon name="heart" size={14} /> For connections that feel like you</span>
-            <h1>Make room for <em>something real.</em></h1>
-            <p>Meet people with shared interests, take things at your own pace, and let a mutual spark become a good conversation.</p>
-            <div className="hero-actions"><Button to="/signup">Create your profile <Icon name="arrowRight" size={17} /></Button><Button to="/#features" variant="soft">Explore HeartLink</Button></div>
-            <div className="hero-trust"><span><Icon name="shield" size={15} /> Adults only</span><span><Icon name="heart" size={15} /> Mutual matches</span><span><Icon name="lock" size={15} /> Private by design</span></div>
-          </div>
-          <div className="hero-visual" aria-label="HeartLink's illustrated couple sharing a heart">
-            <div className="hero-orbit orbit-one" /><div className="hero-orbit orbit-two" />
-            <span className="hero-spark spark-one">♡</span><span className="hero-spark spark-two">✦</span><span className="hero-spark spark-three">♡</span>
-            <div className="hero-art-card"><div className="art-card-top"><span className="online-dot" /> A little connection goes a long way</div><img src="/heartlink-couple.jpg" alt="Two illustrated people sharing a heart" fetchPriority="high" /><span className="art-card-caption"><Icon name="heart" size={17} /> Shared interests. Mutual curiosity.</span></div>
-            <div className="hero-note"><span className="note-icon"><Icon name="heart" size={18} /></span><span><strong>A mutual spark</strong><small>Starts with a hello.</small></span></div>
+    <PublicPage>
+      <PageTransition>
+        {/* Hero Section */}
+        <section className="relative overflow-hidden border-b hl-subtle-divider">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 h-[420px] w-[780px] rounded-full bg-rose-500/15 blur-3xl"
+          />
+          <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+            <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:items-center">
+              <div className="lg:col-span-6 space-y-6">
+                <Badge tone="primary" dot>
+                  Where Chemistry Begins
+                </Badge>
+                <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight text-base-content leading-[1.12]">
+                  Find the one who matches{" "}
+                  <span className="bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 bg-clip-text text-transparent">
+                    your heart.
+                  </span>
+                </h1>
+                <p className="text-base sm:text-lg hl-muted-text max-w-xl leading-relaxed">
+                  HeartLink is the intentional dating app for singles looking for genuine connections. Meet verified people who share your values, passions, and dating goals—free from mindless swipe fatigue.
+                </p>
+
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  {user ? (
+                    <Link to="/dashboard">
+                      <Button size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
+                        Explore Matches
+                      </Button>
+                    </Link>
+                  ) : (
+                    <>
+                      <Link to="/signup">
+                        <Button size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
+                          Find Your Match
+                        </Button>
+                      </Link>
+                      <Link to="/login">
+                        <Button variant="outline" size="lg">
+                          Log In
+                        </Button>
+                      </Link>
+                    </>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t hl-subtle-divider">
+                  <div className="flex items-center gap-2.5 text-xs hl-muted-text">
+                    <ShieldCheck className="h-4 w-4 text-rose-500 shrink-0" strokeWidth={1.75} />
+                    <span>Adults 18+ Verified</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs hl-muted-text">
+                    <Heart className="h-4 w-4 text-rose-500 shrink-0" strokeWidth={1.75} />
+                    <span>Mutual Match Chat Only</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs hl-muted-text">
+                    <MessageSquare className="h-4 w-4 text-rose-500 shrink-0" strokeWidth={1.75} />
+                    <span>Real-Time Chemistry</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-6">
+                <Card variant="elevated" noPadding className="relative overflow-hidden shadow-2xl border-rose-500/20">
+                  <div className="border-b hl-subtle-divider bg-base-200/70 px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-pink-400" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+                      <span className="ml-2 text-xs font-medium hl-muted-text">
+                        HeartLink Match Discovery
+                      </span>
+                    </div>
+                    <Badge tone="primary" dot>Online Now</Badge>
+                  </div>
+
+                  <div className="p-5 sm:p-6 space-y-5 bg-base-100">
+                    <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-base-300">
+                      <img
+                        src="/heartlink-couple.jpg"
+                        alt="HeartLink couple in authentic connection"
+                        fetchPriority="high"
+                        decoding="async"
+                        className="h-full w-full object-cover"
+                      />
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent p-4 flex items-end justify-between text-white">
+                        <div>
+                          <p className="text-xs font-medium text-rose-300">96% Mutual Chemistry</p>
+                          <p className="text-sm font-semibold">Shared love for travel, cozy coffee &amp; live music</p>
+                        </div>
+                        <span className="rounded-full bg-rose-500/80 backdrop-blur-sm px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                          Mutual Match
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="rounded-xl border hl-subtle-divider bg-base-200/60 p-3 text-center sm:text-left">
+                        <Compass className="h-4 w-4 text-rose-500 mb-1.5 mx-auto sm:mx-0" strokeWidth={1.75} />
+                        <p className="text-xs font-semibold text-base-content">Curated Feed</p>
+                        <p className="text-[11px] hl-muted-text mt-0.5">Location &amp; intent</p>
+                      </div>
+                      <div className="rounded-xl border hl-subtle-divider bg-base-200/60 p-3 text-center sm:text-left">
+                        <MessageSquare className="h-4 w-4 text-rose-500 mb-1.5 mx-auto sm:mx-0" strokeWidth={1.75} />
+                        <p className="text-xs font-semibold text-base-content">Instant Sparks</p>
+                        <p className="text-[11px] hl-muted-text mt-0.5">Typing &amp; reactions</p>
+                      </div>
+                      <div className="rounded-xl border hl-subtle-divider bg-base-200/60 p-3 text-center sm:text-left">
+                        <Shield className="h-4 w-4 text-rose-500 mb-1.5 mx-auto sm:mx-0" strokeWidth={1.75} />
+                        <p className="text-xs font-semibold text-base-content">Safe Dating</p>
+                        <p className="text-[11px] hl-muted-text mt-0.5">Verified &amp; protected</p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </div>
           </div>
         </section>
 
-        <section className="promise-strip" aria-label="How HeartLink works"><div><strong>18+</strong><span>Adults only</span></div><i /><div><strong>Mutual</strong><span>Like-based matching</span></div><i /><div><strong>6 photos</strong><span>Room to be yourself</span></div></section>
+        {/* How It Works */}
+        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+          <div className="max-w-2xl mb-10">
+            <p className="text-xs font-semibold uppercase tracking-widest text-rose-500 mb-2">
+              How HeartLink Works
+            </p>
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-base-content">
+              From first spark to real dates—simple, respectful &amp; exciting.
+            </h2>
+          </div>
 
-        <section id="features" className="public-section feature-section">
-          <div className="section-heading"><span className="eyebrow">A more thoughtful way to meet</span><h2>Good connections begin with <em>good intentions.</em></h2><p>Built to make discovering people feel welcoming, clear, and comfortable.</p></div>
-          <div className="feature-grid">
-            <article className="feature-card"><span className="feature-number">01</span><span className="feature-icon"><Icon name="compass" size={21} /></span><h3>Discover with context</h3><p>See real profiles, shared interests, and the details people choose to share.</p></article>
-            <article className="feature-card"><span className="feature-number">02</span><span className="feature-icon"><Icon name="heart" size={21} /></span><h3>Let the feeling be mutual</h3><p>Chat opens after you both show interest, so the first hello has a little more meaning.</p></article>
-            <article className="feature-card"><span className="feature-number">03</span><span className="feature-icon"><Icon name="shield" size={21} /></span><h3>Move at your pace</h3><p>Choose what to share, tune your privacy settings, and use block or report when needed.</p></article>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                step: "01",
+                icon: UserCheck,
+                title: "Curate Your Authentic Story",
+                body: "Upload up to 6 of your favorite photos, answer fun conversation prompts, and let singles know what you're truly looking for.",
+              },
+              {
+                step: "02",
+                icon: Sparkles,
+                title: "Discover Real Chemistry",
+                body: "Explore curated profiles aligned with your age, interests, and distance preferences with smooth pass, like, and superlike controls.",
+              },
+              {
+                step: "03",
+                icon: Heart,
+                title: "Mutual Sparks & Private Chat",
+                body: "When both of you like each other, it's a match! Start real-time private conversations with no unsolicited cold DMs.",
+              },
+            ].map((item) => {
+              const IconComp = item.icon;
+              return (
+                <Card key={item.step} variant="interactive" className="h-full">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                      <IconComp className="h-5 w-5" strokeWidth={1.75} />
+                    </span>
+                    <span className="text-xs font-mono font-semibold text-rose-400">{item.step}</span>
+                  </div>
+                  <h3 className="text-base font-semibold text-base-content mb-2">{item.title}</h3>
+                  <p className="text-sm hl-muted-text leading-relaxed">{item.body}</p>
+                </Card>
+              );
+            })}
           </div>
         </section>
 
-        <section id="how-it-works" className="public-section journey-section">
-          <div className="journey-art"><div className="journey-ring" /><img src="/heartlink-couple.jpg" alt="HeartLink couple illustration" loading="lazy" /><span className="journey-caption">Small moments. Real possibilities.</span></div>
-          <div className="journey-copy"><span className="eyebrow">THE HEARTLINK WAY</span><h2>Less pressure.<br /><em>More possibility.</em></h2><p>There is no perfect opening line. Start by noticing what you have in common and follow the conversation where it naturally goes.</p><ol><li><b>1</b><span><strong>Find a little in common</strong><small>Discover profiles shaped by interests and intent.</small></span></li><li><b>2</b><span><strong>Choose a mutual spark</strong><small>A match happens when interest goes both ways.</small></span></li><li><b>3</b><span><strong>Start with a hello</strong><small>Build a conversation at a pace that feels right.</small></span></li></ol><Button to="/signup" variant="soft">Start exploring <Icon name="arrowRight" size={16} /></Button></div>
+        {/* Safety & Peace of Mind */}
+        <section className="border-y hl-subtle-divider bg-base-100/60">
+          <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+              <div className="lg:col-span-5 space-y-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-rose-500">
+                  Dating Safety
+                </p>
+                <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-base-content">
+                  Your safety and privacy are our highest priority.
+                </h2>
+                <p className="text-sm hl-muted-text leading-relaxed">
+                  HeartLink gives you complete control over who sees your profile, keeps your contact info strictly private, and offers 24/7 moderation support.
+                </p>
+                <div className="pt-2 flex flex-wrap gap-3">
+                  <Link to="/about">
+                    <Button variant="outline" size="sm">Our Dating Standards</Button>
+                  </Link>
+                  <Link to="/help">
+                    <Button variant="ghost" size="sm" leftIcon={<Shield className="h-4 w-4" />}>
+                      Safety Tips &amp; Support
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+              <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  {
+                    icon: ShieldCheck,
+                    title: "Adults 18+ Only Community",
+                    desc: "Every profile requires age verification at signup to ensure a mature, respectful dating atmosphere.",
+                  },
+                  {
+                    icon: Lock,
+                    title: "Total Privacy Protection",
+                    desc: "Your email, birthdate, and exact GPS coordinates are kept private. Only approximate distance is shown.",
+                  },
+                  {
+                    icon: Users,
+                    title: "Mutual Consent Conversations",
+                    desc: "No unwanted messages or intrusive requests. Chats only open when both individuals mutually swipe right.",
+                  },
+                  {
+                    icon: HelpCircle,
+                    title: "Instant Block & Report",
+                    desc: "Feel safe with one-click blocking and direct reporting. Our human safety team investigates every report.",
+                  },
+                ].map((feature) => {
+                  const IconComp = feature.icon;
+                  return (
+                    <Card key={feature.title} className="p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 mt-0.5">
+                          <IconComp className="h-4 w-4" strokeWidth={1.75} />
+                        </span>
+                        <div>
+                          <h3 className="text-sm font-semibold text-base-content">{feature.title}</h3>
+                          <p className="text-xs hl-muted-text mt-1 leading-relaxed">{feature.desc}</p>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </section>
 
-        <section className="closing-cta"><span className="cta-halo" /><span className="eyebrow">YOUR NEXT CHAPTER</span><h2>Show up as yourself.<br /><em>See who you meet.</em></h2><p>One profile, one thoughtful hello, and a little room for something unexpected.</p><Button to="/signup">Create a free profile <Icon name="arrowRight" size={17} /></Button></section>
-      </main>
+        {/* Bottom CTA */}
+        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+          <Card variant="elevated" className="bg-gradient-to-br from-rose-500/10 via-base-100 to-pink-500/10 border-rose-500/20">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 py-4 px-2">
+              <div className="space-y-1.5 max-w-xl">
+                <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-base-content">
+                  Ready to find your special person?
+                </h2>
+                <p className="text-sm hl-muted-text">
+                  Join HeartLink for free today. Create your profile in under two minutes and meet someone wonderful.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 shrink-0">
+                <Link to={user ? "/dashboard" : "/signup"}>
+                  <Button size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
+                    {user ? "Explore Matches" : "Find Your Match Free"}
+                  </Button>
+                </Link>
+                <Link to="/faq">
+                  <Button variant="outline" size="lg">How It Works</Button>
+                </Link>
+              </div>
+            </div>
+          </Card>
+        </section>
+      </PageTransition>
     </PublicPage>
   );
 }
 
-export function AuthPage({ mode = "signup" }) {
+export function AuthPage({ mode = "login" }) {
   const signup = mode === "signup";
-  const { authenticate, authenticateWithGoogle } = useAuth();
-  const location = useLocation();
+  const { user, authenticate, authenticateWithGoogle } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "", dateOfBirth: "", gender: "", termsAccepted: false });
+  const location = useLocation();
+  const destination = location.state?.from || "/dashboard";
+
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    dateOfBirth: "",
+    gender: "",
+    password: "",
+    confirmPassword: "",
+    termsAccepted: false,
+  });
   const [errors, setErrors] = useState({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [serverError, setServerError] = useState("");
   const [success, setSuccess] = useState("");
-  const destination = typeof location.state?.from === "string" && location.state.from.startsWith("/") && !location.state.from.startsWith("//") ? location.state.from : "/discover";
+  const [busy, setBusy] = useState(false);
+  const [resending, setResending] = useState(false);
 
-  function update(event) {
-    const { name, value, checked, type } = event.target;
-    setForm((current) => ({ ...current, [name]: type === "checkbox" ? checked : value }));
-    setErrors((current) => ({ ...current, [name]: "" }));
+  if (user) {
+    return <Navigate to={destination} replace />;
   }
 
-  function validate(includeGoogle = false) {
+  const maxBirthDateValue = new Date();
+  maxBirthDateValue.setFullYear(maxBirthDateValue.getFullYear() - 18);
+  const maxBirthDate = `${maxBirthDateValue.getFullYear()}-${String(
+    maxBirthDateValue.getMonth() + 1,
+  ).padStart(2, "0")}-${String(maxBirthDateValue.getDate()).padStart(2, "0")}`;
+
+  const update = (event) => {
+    const { name, type, value, checked } = event.target;
+    const nextValue = type === "checkbox" ? checked : value;
+    setForm((prev) => ({ ...prev, [name]: nextValue }));
+    setErrors((prev) => {
+      if (!prev[name]) return prev;
+      const copy = { ...prev };
+      delete copy[name];
+      return copy;
+    });
+  };
+
+  const validate = (includeGoogle = false) => {
     const next = {};
     if (signup || includeGoogle) {
       const name = form.name.trim();
-      if (name.length < 2 || name.length > 60) next.name = "Enter your name (2–60 characters).";
-      if (!form.dateOfBirth || ageOn(form.dateOfBirth) < 18 || ageOn(form.dateOfBirth) > 120) next.dateOfBirth = "You must be 18 or older to join.";
-      if (!["male", "female", "non-binary", "other"].includes(form.gender)) next.gender = "Choose an option to continue.";
-      if (!form.termsAccepted) next.termsAccepted = "Please agree to the terms to create an account.";
+      if (name.length < 2 || name.length > 60) next.name = "Enter your full name (2–60 characters).";
+      const age = calculateAgeFromIso(form.dateOfBirth);
+      if (!form.dateOfBirth || age < 18 || age > 120) next.dateOfBirth = "You must be 18 or older to join.";
+      if (!["male", "female", "non-binary", "other"].includes(form.gender)) next.gender = "Select your gender option.";
+      if (!form.termsAccepted) next.termsAccepted = "Please accept the Terms and Privacy Policy.";
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()) || form.email.length > 100) next.email = "Enter a valid email address.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()) || form.email.length > 100) {
+      next.email = "Enter a valid email address.";
+    }
     if (signup || includeGoogle) {
-      if (!includeGoogle && (form.password.length < 8 || form.password.length > 72)) next.password = "Use 8–72 characters.";
-      if (signup && form.password !== form.confirmPassword) next.confirmPassword = "Your passwords do not match.";
-    } else if (!form.password) next.password = "Enter your password.";
+      if (!includeGoogle && (form.password.length < 8 || form.password.length > 72)) {
+        next.password = "Password must be 8–72 characters.";
+      }
+      if (signup && form.password !== form.confirmPassword) {
+        next.confirmPassword = "Passwords do not match.";
+      }
+    } else if (!form.password) {
+      next.password = "Enter your password.";
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
-  }
+  };
 
-  async function submit(event) {
+  const submit = async (event) => {
     event.preventDefault();
     setServerError("");
     setSuccess("");
@@ -115,168 +431,926 @@ export function AuthPage({ mode = "signup" }) {
     setBusy(true);
     try {
       const payload = signup
-        ? { name: form.name.trim(), email: form.email.trim(), password: form.password, dateOfBirth: form.dateOfBirth, gender: form.gender, termsAccepted: true }
+        ? {
+            name: form.name.trim(),
+            email: form.email.trim(),
+            password: form.password,
+            dateOfBirth: form.dateOfBirth,
+            gender: form.gender,
+            termsAccepted: true,
+          }
         : { email: form.email.trim(), password: form.password };
       const result = await authenticate(mode, payload);
-      if (result.user) navigate(destination, { replace: true });
-      else setSuccess(result.message || "Check your inbox for the next step.");
+      if (result.user) {
+        toast.success(signup ? "Welcome to HeartLink" : "Signed in successfully");
+        navigate(destination, { replace: true });
+      } else {
+        setSuccess(result.message || "Check your email inbox to verify your account.");
+      }
     } catch (error) {
-      setServerError(apiErrorMessage(error, signup ? "We could not create the account." : "We could not sign you in."));
+      setServerError(apiErrorMessage(error, signup ? "Could not create your account." : "Could not sign in."));
     } finally {
       setBusy(false);
     }
-  }
+  };
 
-  async function googleSubmit() {
+  const googleSubmit = async () => {
     setServerError("");
     setSuccess("");
     if (signup && !validate(true)) return;
     setBusy(true);
     try {
       const idToken = await getGoogleIdToken();
-      const result = await authenticateWithGoogle(idToken, signup ? { name: form.name.trim(), dateOfBirth: form.dateOfBirth, gender: form.gender, termsAccepted: true } : {});
-      if (result.user) navigate(destination, { replace: true });
-      else setSuccess(result.message || "Your account is ready for the next step.");
+      const result = await authenticateWithGoogle(
+        idToken,
+        signup
+          ? {
+              name: form.name.trim(),
+              dateOfBirth: form.dateOfBirth,
+              gender: form.gender,
+              termsAccepted: true,
+            }
+          : {},
+      );
+      if (result.user) {
+        toast.success("Signed in with Google");
+        navigate(destination, { replace: true });
+      } else {
+        setSuccess(result.message || "Your account is ready for the next step.");
+      }
     } catch (error) {
       setServerError(apiErrorMessage(error, error.message || "Google sign-in could not be completed."));
     } finally {
       setBusy(false);
     }
-  }
+  };
 
-  const passwordStrength = form.password.length < 8 ? "Add at least 8 characters" : form.password.length < 12 ? "Good start — longer is safer" : "Longer password looks good";
-  const maxBirthDateValue = new Date();
-  maxBirthDateValue.setFullYear(maxBirthDateValue.getFullYear() - 18);
-  const maxBirthDate = `${maxBirthDateValue.getFullYear()}-${String(maxBirthDateValue.getMonth() + 1).padStart(2, "0")}-${String(maxBirthDateValue.getDate()).padStart(2, "0")}`;
+  const handleResendVerification = async () => {
+    if (!form.email.trim()) return;
+    setResending(true);
+    try {
+      const { data } = await api.post("/auth/resend-verification", { email: form.email.trim() });
+      toast.success(data.message || "Verification email sent.");
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not resend verification email."));
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const showResendAction = !signup && /verify|verification/i.test(serverError);
 
   return (
-    <div className="auth-page">
-      <div className="auth-bg-orb auth-bg-orb-one" /><div className="auth-bg-orb auth-bg-orb-two" />
-      <section className="auth-shell">
-        <aside className="auth-art-panel">
-          <Logo />
-          <div className="auth-art-scene"><span className="auth-orbit auth-orbit-a" /><span className="auth-orbit auth-orbit-b" /><span className="auth-float-heart heart-a">♡</span><span className="auth-float-heart heart-b">✦</span><img src="/heartlink-couple.jpg" alt="HeartLink's illustrated couple holding a heart" /></div>
-          <div className="auth-art-copy"><span className="eyebrow">REAL PEOPLE. REAL POSSIBILITIES.</span><h2>Good people.<br /><em>Better connections.</em></h2><p>Meet with care, share a little curiosity, and see where a real conversation can lead.</p><div><span><Icon name="shield" size={16} /> Adults-only community</span><span><Icon name="heart" size={16} /> Built for mutual interest</span></div></div>
-        </aside>
-        <main className="auth-form-panel">
-          <div className="auth-form-top"><p>{signup ? "Already a member?" : "New to HeartLink?"}</p><Link to={signup ? "/login" : "/signup"}>{signup ? "Log in" : "Create an account"} <Icon name="arrowRight" size={14} /></Link></div>
-          <div className="auth-form-inner">
-            <span className="eyebrow">{signup ? "A GOOD PLACE TO BEGIN" : "GOOD TO SEE YOU AGAIN"}</span>
-            <h1>{signup ? "Create your account" : "Welcome back"}</h1>
-            <p className="auth-lede">{signup ? "A few details to get your profile started." : "Sign in to see who you have connected with."}</p>
-            {signup && <p className="privacy-note"><Icon name="shield" size={15} /> Your birth date is only used to confirm you’re 18+.</p>}
-            {serverError && <div className="form-banner form-banner-error" role="alert"><Icon name="alert" size={17} />{serverError}</div>}
-            {success && <div className="form-banner form-banner-success" role="status"><Icon name="checkCircle" size={17} />{success}</div>}
-            <form className="auth-form" onSubmit={submit} noValidate>
-              {signup && <Field id="signup-name" name="name" label="Full name" autoComplete="name" placeholder="Your full name" maxLength={60} value={form.name} onChange={update} error={errors.name} />}
-              <Field id="auth-email" name="email" label="Email address" type="email" autoComplete="email" placeholder="you@example.com" maxLength={100} value={form.email} onChange={update} error={errors.email} />
-              {signup && <div className="form-row"><div className="field"><label htmlFor="signup-dob">Date of birth</label><input id="signup-dob" type="date" name="dateOfBirth" autoComplete="bday" max={maxBirthDate} value={form.dateOfBirth} onChange={update} aria-invalid={Boolean(errors.dateOfBirth)} aria-describedby={errors.dateOfBirth ? "signup-dob-error" : "signup-dob-hint"} /><small id="signup-dob-hint" className="field-hint">You must be 18 or older.</small>{errors.dateOfBirth && <small id="signup-dob-error" className="field-error" role="alert">{errors.dateOfBirth}</small>}</div><div className="field"><label htmlFor="signup-gender">Gender</label><select id="signup-gender" name="gender" value={form.gender} onChange={update} aria-invalid={Boolean(errors.gender)}><option value="">Choose an option</option><option value="female">Woman</option><option value="male">Man</option><option value="non-binary">Non-binary</option><option value="other">Other</option></select>{errors.gender && <small className="field-error" role="alert">{errors.gender}</small>}</div></div>}
-              <div className="field"><div className="field-label-row"><label htmlFor="auth-password">Password</label>{!signup && <Link to="/forgot-password">Forgot password?</Link>}</div><div className="password-control"><input id="auth-password" type={showPassword ? "text" : "password"} name="password" autoComplete={signup ? "new-password" : "current-password"} placeholder={signup ? "At least 8 characters" : "Your password"} minLength={signup ? 8 : undefined} maxLength={72} value={form.password} onChange={update} aria-invalid={Boolean(errors.password)} /><button type="button" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} onClick={() => setShowPassword((value) => !value)}><Icon name={showPassword ? "eyeOff" : "eye"} size={17} /></button></div>{signup && <small className="field-hint">{passwordStrength}</small>}{errors.password && <small className="field-error" role="alert">{errors.password}</small>}</div>
-              {signup && <div className="field"><label htmlFor="signup-confirm">Confirm password</label><div className="password-control"><input id="signup-confirm" type={showConfirm ? "text" : "password"} name="confirmPassword" autoComplete="new-password" placeholder="Re-enter your password" maxLength={72} value={form.confirmPassword} onChange={update} aria-invalid={Boolean(errors.confirmPassword)} /><button type="button" aria-label={showConfirm ? "Hide confirmation" : "Show confirmation"} aria-pressed={showConfirm} onClick={() => setShowConfirm((value) => !value)}><Icon name={showConfirm ? "eyeOff" : "eye"} size={17} /></button></div>{errors.confirmPassword && <small className="field-error" role="alert">{errors.confirmPassword}</small>}</div>}
-              {signup && <div className="terms-row"><input id="terms-accepted" type="checkbox" name="termsAccepted" checked={form.termsAccepted} onChange={update} aria-invalid={Boolean(errors.termsAccepted)} /><label htmlFor="terms-accepted">I agree to the <Link to="/terms">Terms of Service</Link> and <Link to="/privacy">Privacy Policy</Link>.</label>{errors.termsAccepted && <small className="field-error" role="alert">{errors.termsAccepted}</small>}</div>}
-              <Button type="submit" disabled={busy} className="auth-submit">{busy ? <><span className="button-spinner" /> {signup ? "Creating your account…" : "Signing in…"}</> : <>{signup ? "Create account" : "Log in"} <Icon name="arrowRight" size={17} /></>}</Button>
-            </form>
-            {firebaseConfigured && <><div className="auth-divider"><span /> or <span /></div><Button variant="outline" disabled={busy} className="google-button" onClick={googleSubmit}><span className="google-g">G</span>{signup ? "Continue with Google" : "Sign in with Google"}</Button>{signup && <small className="google-hint">Complete your profile details above before continuing.</small>}</>}
-            <p className="auth-switch">{signup ? "Already have an account?" : "New to HeartLink?"} <Link to={signup ? "/login" : "/signup"}>{signup ? "Log in" : "Create an account"}</Link></p>
+    <div className="min-h-dvh grid grid-cols-1 lg:grid-cols-12 bg-base-200 text-base-content">
+      {/* Left Luxury Brand Panel */}
+      <aside className="hidden lg:flex lg:col-span-5 flex-col justify-between bg-[#140c13] text-slate-100 p-10 border-r border-rose-500/10 relative overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-24 -left-24 h-80 w-80 rounded-full bg-rose-500/20 blur-3xl"
+        />
+        <div className="relative z-10 flex items-center justify-between">
+          <Link to="/" className="no-underline text-white">
+            <Logo />
+          </Link>
+          <Link to="/" className="text-xs text-rose-300 hover:text-white transition-colors">
+            ← Back to Home
+          </Link>
+        </div>
+
+        <div className="relative z-10 space-y-6 my-auto py-8">
+          <div className="aspect-[16/10] w-full overflow-hidden rounded-2xl border border-rose-500/20 shadow-2xl">
+            <img
+              src="/heartlink-couple.jpg"
+              alt="HeartLink curated connection artwork"
+              fetchPriority="high"
+              decoding="async"
+              className="h-full w-full object-cover"
+            />
           </div>
-          <div className="auth-assurance"><Icon name="lock" size={14} /> Your password is never shown on your profile.</div>
-        </main>
-      </section>
+          <div className="space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-rose-300">
+              Authentic Connections
+            </p>
+            <h2 className="text-2xl font-semibold tracking-tight text-white leading-snug">
+              Real connections with people who truly match your energy.
+            </h2>
+            <p className="text-sm text-rose-200/70 leading-relaxed">
+              Curate your authentic dating profile, discover mutual sparks, and enjoy real-time conversations without unsolicited noise.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 pt-2 text-xs text-rose-100">
+            <div className="rounded-xl border border-rose-500/20 bg-rose-950/20 p-3 flex items-center gap-2">
+              <Shield className="h-4 w-4 text-rose-400 shrink-0" />
+              <span>Adults 18+ verified</span>
+            </div>
+            <div className="rounded-xl border border-rose-500/20 bg-rose-950/20 p-3 flex items-center gap-2">
+              <Heart className="h-4 w-4 text-rose-400 shrink-0" />
+              <span>Mutual match chat only</span>
+            </div>
+          </div>
+        </div>
+
+        <p className="relative z-10 text-xs text-slate-500">
+          Your password and email are never exposed publicly.
+        </p>
+      </aside>
+
+      {/* Right Auth Form Panel */}
+      <main className="lg:col-span-7 flex flex-col justify-center px-4 py-8 sm:px-8 lg:px-14">
+        <div className="mx-auto w-full max-w-md space-y-6">
+          <div className="flex items-center justify-between lg:hidden pb-2 border-b hl-subtle-divider">
+            <Link to="/" className="no-underline">
+              <Logo />
+            </Link>
+            <Link to="/" className="text-xs hl-muted-text hover:text-base-content">
+              Home
+            </Link>
+          </div>
+
+          <FadeInView className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-widest hl-accent-text">
+              {signup ? "Create Account" : "Member Sign In"}
+            </p>
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-base-content">
+              {signup ? "Join HeartLink" : "Welcome back"}
+            </h1>
+            <p className="text-sm hl-muted-text">
+              {signup
+                ? "Set up your private member credentials in under a minute."
+                : "Sign in to access your dashboard, matches, and messages."}
+            </p>
+          </FadeInView>
+
+          {serverError && (
+            <div role="alert" className="rounded-xl border border-error/30 bg-error/10 p-3.5 text-xs text-error space-y-2">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>{serverError}</span>
+              </div>
+              {showResendAction && (
+                <Button size="xs" variant="outline" loading={resending} onClick={handleResendVerification}>
+                  Resend verification email
+                </Button>
+              )}
+            </div>
+          )}
+
+          {success && (
+            <div role="status" className="rounded-xl border border-success/30 bg-success/10 p-3.5 text-xs text-success flex items-start gap-2.5">
+              <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>{success}</span>
+            </div>
+          )}
+
+          <Card>
+            <form onSubmit={submit} noValidate className="space-y-4">
+              {signup && (
+                <Field
+                  id="signup-name"
+                  name="name"
+                  label="Full name"
+                  autoComplete="name"
+                  placeholder="Alex Morgan"
+                  maxLength={60}
+                  required
+                  value={form.name}
+                  onChange={update}
+                  error={errors.name}
+                />
+              )}
+
+              <Field
+                id="auth-email"
+                name="email"
+                label="Email address"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                maxLength={100}
+                required
+                value={form.email}
+                onChange={update}
+                error={errors.email}
+              />
+
+              {signup && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field
+                    id="signup-dob"
+                    name="dateOfBirth"
+                    label="Date of birth"
+                    type="date"
+                    autoComplete="bday"
+                    max={maxBirthDate}
+                    hint={!errors.dateOfBirth ? "Minimum age: 18 years" : ""}
+                    required
+                    value={form.dateOfBirth}
+                    onChange={update}
+                    error={errors.dateOfBirth}
+                  />
+                  <Select
+                    id="signup-gender"
+                    name="gender"
+                    label="Gender"
+                    required
+                    value={form.gender}
+                    onChange={update}
+                    error={errors.gender}
+                    options={[
+                      { value: "", label: "Select gender" },
+                      { value: "female", label: "Woman" },
+                      { value: "male", label: "Man" },
+                      { value: "non-binary", label: "Non-binary" },
+                      { value: "other", label: "Other" },
+                    ]}
+                  />
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-base-content/90">Password</span>
+                  {!signup && (
+                    <Link to="/forgot-password" className="text-xs font-medium hl-accent-text hover:underline">
+                      Forgot password?
+                    </Link>
+                  )}
+                </div>
+                <Field
+                  id="auth-password"
+                  name="password"
+                  type="password"
+                  autoComplete={signup ? "new-password" : "current-password"}
+                  placeholder={signup ? "Minimum 8 characters" : "Enter your password"}
+                  maxLength={72}
+                  required
+                  value={form.password}
+                  onChange={update}
+                  error={errors.password}
+                  hint={
+                    signup && !errors.password
+                      ? form.password.length >= 12
+                        ? "Strong password length"
+                        : "Use 8 to 72 characters"
+                      : ""
+                  }
+                />
+              </div>
+
+              {signup && (
+                <Field
+                  id="signup-confirm"
+                  name="confirmPassword"
+                  label="Confirm password"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Re-enter password"
+                  maxLength={72}
+                  required
+                  value={form.confirmPassword}
+                  onChange={update}
+                  error={errors.confirmPassword}
+                />
+              )}
+
+              {signup && (
+                <div className="space-y-1 pt-1">
+                  <label htmlFor="terms-accepted" className="flex items-start gap-2.5 text-xs hl-muted-text cursor-pointer">
+                    <input
+                      id="terms-accepted"
+                      type="checkbox"
+                      name="termsAccepted"
+                      checked={form.termsAccepted}
+                      onChange={update}
+                      className="checkbox checkbox-primary checkbox-sm mt-0.5 rounded"
+                    />
+                    <span>
+                      I confirm I am 18+ and accept the{" "}
+                      <Link to="/terms" className="hl-accent-text underline">
+                        Terms of Service
+                      </Link>{" "}
+                      and{" "}
+                      <Link to="/privacy" className="hl-accent-text underline">
+                        Privacy Policy
+                      </Link>
+                      .
+                    </span>
+                  </label>
+                  {errors.termsAccepted && (
+                    <p role="alert" className="text-xs text-error">
+                      {errors.termsAccepted}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                fullWidth
+                size="lg"
+                loading={busy}
+                rightIcon={<ArrowRight className="h-4 w-4" />}
+              >
+                {signup ? "Create account" : "Sign in"}
+              </Button>
+            </form>
+
+            {firebaseConfigured && (
+              <>
+                <div className="divider text-[11px] uppercase hl-muted-text my-4">or</div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  fullWidth
+                  disabled={busy}
+                  onClick={googleSubmit}
+                >
+                  <span className="font-bold text-indigo-500">G</span>
+                  <span>{signup ? "Continue with Google" : "Sign in with Google"}</span>
+                </Button>
+              </>
+            )}
+          </Card>
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs hl-muted-text px-1">
+            <p>
+              {signup ? "Already have an account?" : "New to HeartLink?"}{" "}
+              <Link to={signup ? "/login" : "/signup"} className="font-semibold hl-accent-text hover:underline">
+                {signup ? "Sign in" : "Create account"}
+              </Link>
+            </p>
+            <Link to="/admin/login" className="font-medium hover:text-base-content transition-colors inline-flex items-center gap-1">
+              <Shield className="h-3.5 w-3.5" />
+              Staff / Admin login →
+            </Link>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
 
 export function AboutPage() {
-  return <PublicPage className="info-page"><main className="info-main about-main"><section className="about-intro"><div className="about-art-card"><img src="/heartlink-couple.jpg" alt="HeartLink's illustrated couple sharing a heart" /><span><strong>Real people.</strong><small>Real possibilities.</small></span></div><div className="about-copy"><span className="eyebrow">A LITTLE ABOUT US</span><h1>Connection should feel <em>human.</em></h1><p>HeartLink is a place for adults who believe a good relationship begins with curiosity, kindness, and room to be yourself.</p><div className="about-principles"><div><Icon name="heart" /><strong>Mutual by design</strong><span>Both people choose to connect.</span></div><div><Icon name="shield" /><strong>Safety tools in reach</strong><span>Privacy controls, block, and report.</span></div><div><Icon name="message" /><strong>Conversation first</strong><span>Start with what you have in common.</span></div></div><Button to="/signup">Meet with intention <Icon name="arrowRight" /></Button></div></section><section className="about-values"><div><span className="value-index">01</span><h2>People before profiles</h2><p>Give someone a sense of who you are through the details and interests you choose to share.</p></div><div><span className="value-index">02</span><h2>Kindness as the standard</h2><p>Respectful conversation is part of the experience. Members can block or report when something feels wrong.</p></div><div><span className="value-index">03</span><h2>A pace that feels right</h2><p>There is no need to rush. Explore, make a mutual connection, and let a conversation unfold.</p></div></section></main></PublicPage>;
+  return (
+    <PublicPage>
+      <PageTransition>
+        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8 space-y-12">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+            <div className="md:col-span-5">
+              <Card noPadding variant="elevated">
+                <img
+                  src="/heartlink-couple.jpg"
+                  alt="HeartLink connection illustration"
+                  className="aspect-[4/3] w-full object-cover"
+                />
+              </Card>
+            </div>
+            <div className="md:col-span-7 space-y-4">
+              <Badge tone="primary">About HeartLink</Badge>
+              <h1 className="text-3xl font-semibold tracking-tight text-base-content">
+                Connection built on respect, transparency, and intention.
+              </h1>
+              <p className="text-sm sm:text-base hl-muted-text leading-relaxed">
+                HeartLink is engineered for adults seeking thoughtful conversations without algorithmic noise. Every member controls their visibility, discovery radius, notification preferences, and safety boundaries.
+              </p>
+              <div className="pt-2">
+                <Link to="/signup">
+                  <Button rightIcon={<ArrowRight className="h-4 w-4" />}>Join HeartLink</Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[
+              {
+                index: "01",
+                title: "People Before Metrics",
+                desc: "Profiles prioritize real prompts, lifestyle alignment, and shared interests.",
+              },
+              {
+                index: "02",
+                title: "Safety Always Accessible",
+                desc: "One-click reporting and blocking are paired with human moderator queues.",
+              },
+              {
+                index: "03",
+                title: "Controlled Privacy",
+                desc: "Toggle online presence, read receipts, or profile visibility at any moment.",
+              },
+            ].map((item) => (
+              <Card key={item.index}>
+                <span className="text-xs font-mono font-semibold hl-accent-text">{item.index}</span>
+                <h2 className="text-base font-semibold text-base-content mt-2">{item.title}</h2>
+                <p className="text-xs hl-muted-text mt-1.5 leading-relaxed">{item.desc}</p>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </PageTransition>
+    </PublicPage>
+  );
 }
 
 export function FAQPage() {
   const [search, setSearch] = useState("");
-  const [open, setOpen] = useState(0);
-  const filtered = useMemo(() => faqItems.filter(([question, answer]) => `${question} ${answer}`.toLowerCase().includes(search.trim().toLowerCase())), [search]);
-  return <PublicPage className="info-page"><main className="info-main faq-main"><span className="eyebrow">WE’VE GOT ANSWERS</span><h1>Frequently asked <em>questions.</em></h1><p className="info-lede">Clear answers so you can spend more time getting to know people.</p><label className="faq-search" htmlFor="faq-search"><Icon name="search" size={18} /><input id="faq-search" type="search" placeholder="Search matching, privacy, membership…" value={search} onChange={(event) => { setSearch(event.target.value); setOpen(0); }} /></label><div className="faq-list">{filtered.map(([question, answer], index) => <article className={`faq-item ${open === index ? "open" : ""}`} key={question}><button type="button" aria-expanded={open === index} onClick={() => setOpen(open === index ? -1 : index)}><span>{question}</span><b>{open === index ? "−" : "+"}</b></button>{open === index && <p>{answer}</p>}</article>)}{!filtered.length && <EmptyState icon="search" title="No matching questions" text="Try another word, or send a note to our support team." action={<Button to="/help" variant="soft">Contact support</Button>} />}</div><p className="faq-contact">Still have a question? <Link to="/help">Get in touch with our team <Icon name="arrowRight" size={14} /></Link></p></main></PublicPage>;
+  const [openIndex, setOpenIndex] = useState(0);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return FAQ_ITEMS;
+    return FAQ_ITEMS.filter(([qText, aText]) => `${qText} ${aText}`.toLowerCase().includes(q));
+  }, [search]);
+
+  return (
+    <PublicPage>
+      <PageTransition>
+        <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 space-y-6">
+          <PageHeader
+            eyebrow="Knowledge Base"
+            title="Frequently Asked Questions"
+            subtitle="Straightforward answers on matching, privacy, moderation, and account controls."
+          />
+
+          <SearchBar
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setOpenIndex(0);
+            }}
+            onClear={() => setSearch("")}
+            placeholder="Filter topics (privacy, messages, photos, safety)..."
+            label="Filter FAQ items"
+          />
+
+          {filtered.length === 0 ? (
+            <Card>
+              <EmptyState
+                title="No matching questions"
+                description="Try another search keyword or reach out directly to our support team."
+                action={
+                  <Link to="/help">
+                    <Button size="sm" variant="outline">Contact Support</Button>
+                  </Link>
+                }
+              />
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {filtered.map(([question, answer], idx) => {
+                const isOpen = openIndex === idx;
+                return (
+                  <Card key={question} noPadding className="overflow-hidden">
+                    <button
+                      type="button"
+                      aria-expanded={isOpen}
+                      onClick={() => setOpenIndex(isOpen ? -1 : idx)}
+                      className="w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-base-200/60 transition-colors cursor-pointer"
+                    >
+                      <span className="text-sm font-semibold text-base-content">{question}</span>
+                      <span className="text-base font-mono hl-muted-text shrink-0">
+                        {isOpen ? "−" : "+"}
+                      </span>
+                    </button>
+                    {isOpen && (
+                      <div className="px-5 pb-4 pt-1 text-sm hl-muted-text border-t hl-subtle-divider leading-relaxed">
+                        {answer}
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </PageTransition>
+    </PublicPage>
+  );
 }
 
 export function LegalPage({ type = "terms" }) {
   const privacy = type === "privacy";
-  return <PublicPage className="info-page"><main className="info-main legal-main"><span className="eyebrow">HEARTLINK POLICIES</span><h1>{privacy ? "Privacy, in plain language." : "A few ways to keep HeartLink kind."}</h1><p className="info-lede">This project’s policy pages are drafts. Review them with qualified counsel before public launch.</p><article className="legal-card">{privacy ? <><h2>What your profile shows</h2><p>Your public profile includes only the details you choose to share, such as your name, age, city, interests, photos, and profile details. Your email and exact date of birth are not shown on your profile.</p><h2>How your data is handled</h2><p>Account records and profile data are sent to the HeartLink API and stored in its configured MongoDB Atlas database. Authentication refresh tokens are handled using an HTTP-only cookie; the browser keeps the short-lived access token in memory.</p><h2>Your choices</h2><p>You can edit your profile, change visibility and notification preferences, block members, or request account deletion in Settings. Contact Support for privacy questions.</p></> : <><h2>Adults only</h2><p>HeartLink is intended for people aged 18 and older. Do not create an account using another person’s identity or an inaccurate birth date.</p><h2>Respect and consent</h2><p>Do not harass, threaten, impersonate, or share content that violates another person’s consent. Use the report and block tools when a member’s behavior concerns you.</p><h2>Account and safety</h2><p>You are responsible for keeping your sign-in details private. Do not share financial information, verification codes, or passwords with other members. You can delete your account from Settings.</p></>}</article><Button to="/signup">Create an account <Icon name="arrowRight" /></Button></main></PublicPage>;
+
+  return (
+    <PublicPage>
+      <PageTransition>
+        <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 space-y-6">
+          <PageHeader
+            eyebrow="Governance & Compliance"
+            title={privacy ? "Privacy Policy" : "Terms of Service"}
+            subtitle={
+              privacy
+                ? "How HeartLink handles member credentials, profile details, and real-time sessions."
+                : "Community expectations and account safety responsibilities on HeartLink."
+            }
+          />
+          <Card className="space-y-5 text-sm hl-muted-text leading-relaxed">
+            {privacy ? (
+              <>
+                <section className="space-y-1.5">
+                  <h2 className="text-base font-semibold text-base-content">Public Profile Scope</h2>
+                  <p>
+                    Profiles display only chosen attributes (name, computed age, city, bio, interests, prompts, and photos). Your email address and exact birth date are never shared publicly.
+                  </p>
+                </section>
+                <section className="space-y-1.5">
+                  <h2 className="text-base font-semibold text-base-content">Security &amp; Storage</h2>
+                  <p>
+                    Data is stored in MongoDB Atlas with GridFS media isolation. Authentication uses short-lived JWTs and HTTP-only refresh sessions with activity auditing.
+                  </p>
+                </section>
+                <section className="space-y-1.5">
+                  <h2 className="text-base font-semibold text-base-content">Member Controls</h2>
+                  <p>
+                    You may toggle visibility, manage blocked accounts, pause online presence, or permanently erase your account from Settings.
+                  </p>
+                </section>
+              </>
+            ) : (
+              <>
+                <section className="space-y-1.5">
+                  <h2 className="text-base font-semibold text-base-content">Adults 18+ Policy</h2>
+                  <p>
+                    HeartLink is strictly for adults aged 18 and older. Accurate birth dates and authentic identity details are required.
+                  </p>
+                </section>
+                <section className="space-y-1.5">
+                  <h2 className="text-base font-semibold text-base-content">Respect &amp; Safety</h2>
+                  <p>
+                    Harassment, impersonation, spam, or non-consensual content is prohibited and subject to suspension by our moderation team.
+                  </p>
+                </section>
+                <section className="space-y-1.5">
+                  <h2 className="text-base font-semibold text-base-content">Account Stewardship</h2>
+                  <p>
+                    Keep your password confidential and never share authentication links or financial requests with other members.
+                  </p>
+                </section>
+              </>
+            )}
+          </Card>
+        </div>
+      </PageTransition>
+    </PublicPage>
+  );
 }
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [state, setState] = useState({ busy: false, message: "", error: "" });
-  async function submit(event) {
-    event.preventDefault();
+
+  const submit = async (e) => {
+    e.preventDefault();
     setState({ busy: true, message: "", error: "" });
     try {
       const { data } = await api.post("/auth/forgot-password", { email: email.trim() });
-      setState({ busy: false, message: data.message || "If an account exists, a reset link will be sent.", error: "" });
-    } catch (error) {
-      setState({ busy: false, message: "", error: apiErrorMessage(error, "We could not submit your request.") });
+      setState({
+        busy: false,
+        message: data.message || "If an account exists for that email, recovery instructions have been sent.",
+        error: "",
+      });
+    } catch (err) {
+      setState({ busy: false, message: "", error: apiErrorMessage(err, "Unable to process password recovery.") });
     }
-  }
-  return <PublicPage className="info-page"><main className="info-main recovery-main"><span className="eyebrow">ACCOUNT RECOVERY</span><h1>Reset your password</h1><p className="info-lede">Enter your account email. If it exists, we’ll send a secure reset link.</p><form className="recovery-form" onSubmit={submit}>{state.error && <div className="form-banner form-banner-error" role="alert"><Icon name="alert" />{state.error}</div>}{state.message && <div className="form-banner form-banner-success" role="status"><Icon name="checkCircle" />{state.message}</div>}<Field id="recovery-email" label="Email address" type="email" autoComplete="email" maxLength={100} required placeholder="you@example.com" value={email} onChange={(event) => setEmail(event.target.value)} /><Button type="submit" disabled={state.busy}>{state.busy ? "Sending…" : "Send reset link"} <Icon name="arrowRight" /></Button></form><Link className="recovery-back" to="/login"><Icon name="arrowLeft" size={15} /> Back to login</Link></main></PublicPage>;
+  };
+
+  return (
+    <PublicPage>
+      <PageTransition>
+        <div className="mx-auto max-w-md px-4 py-16">
+          <Card className="space-y-5">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-widest hl-accent-text">Recovery</p>
+              <h1 className="text-xl font-semibold text-base-content">Reset your password</h1>
+              <p className="text-xs hl-muted-text">
+                Enter your email address and we will send a secure password reset link if your account is active.
+              </p>
+            </div>
+            {state.error && (
+              <div role="alert" className="rounded-lg border border-error/30 bg-error/10 p-3 text-xs text-error">
+                {state.error}
+              </div>
+            )}
+            {state.message && (
+              <div role="status" className="rounded-lg border border-success/30 bg-success/10 p-3 text-xs text-success">
+                {state.message}
+              </div>
+            )}
+            <form onSubmit={submit} className="space-y-4">
+              <Field
+                id="recovery-email"
+                label="Email address"
+                type="email"
+                autoComplete="email"
+                required
+                leftIcon={<Mail className="h-4 w-4" />}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+              <Button type="submit" fullWidth loading={state.busy}>
+                Send Reset Link
+              </Button>
+            </form>
+            <Link to="/login" className="inline-flex items-center gap-1.5 text-xs hl-muted-text hover:text-base-content">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back to Sign In
+            </Link>
+          </Card>
+        </div>
+      </PageTransition>
+    </PublicPage>
+  );
 }
 
 export function ResetPasswordPage() {
   const { token = "" } = useParams();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [show, setShow] = useState(false);
   const [state, setState] = useState({ busy: false, message: "", error: "" });
-  async function submit(event) {
-    event.preventDefault();
-    if (password !== confirm) return setState({ busy: false, message: "", error: "Your passwords do not match." });
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (password.length < 8) {
+      setState({ busy: false, message: "", error: "Password must be at least 8 characters." });
+      return;
+    }
+    if (password !== confirm) {
+      setState({ busy: false, message: "", error: "Passwords do not match." });
+      return;
+    }
     setState({ busy: true, message: "", error: "" });
     try {
       const { data } = await api.post("/auth/reset-password", { token, newPassword: password });
-      setState({ busy: false, message: data.message || "Your password was reset. You can log in now.", error: "" });
-    } catch (error) {
-      setState({ busy: false, message: "", error: apiErrorMessage(error, "This reset link is invalid or expired.") });
+      setState({
+        busy: false,
+        message: data.message || "Your password has been updated. You may now sign in.",
+        error: "",
+      });
+    } catch (err) {
+      setState({ busy: false, message: "", error: apiErrorMessage(err, "This reset link is invalid or expired.") });
     }
-  }
-  return <PublicPage className="info-page"><main className="info-main recovery-main"><span className="eyebrow">ACCOUNT RECOVERY</span><h1>Choose a new password</h1><p className="info-lede">Use a password between 8 and 72 characters.</p><form className="recovery-form" onSubmit={submit}>{state.error && <div className="form-banner form-banner-error" role="alert">{state.error}</div>}{state.message && <div className="form-banner form-banner-success" role="status">{state.message}</div>}<div className="field"><label htmlFor="new-password">New password</label><div className="password-control"><input id="new-password" type={show ? "text" : "password"} minLength={8} maxLength={72} required value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" /><button type="button" aria-label={show ? "Hide password" : "Show password"} onClick={() => setShow((value) => !value)}><Icon name={show ? "eyeOff" : "eye"} /></button></div></div><div className="field"><label htmlFor="confirm-password">Confirm password</label><div className="password-control"><input id="confirm-password" type={show ? "text" : "password"} minLength={8} maxLength={72} required value={confirm} onChange={(event) => setConfirm(event.target.value)} autoComplete="new-password" /></div></div><Button type="submit" disabled={state.busy}>{state.busy ? "Saving…" : "Reset password"} <Icon name="arrowRight" /></Button></form><Link className="recovery-back" to="/login"><Icon name="arrowLeft" size={15} /> Back to login</Link></main></PublicPage>;
+  };
+
+  return (
+    <PublicPage>
+      <PageTransition>
+        <div className="mx-auto max-w-md px-4 py-16">
+          <Card className="space-y-5">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-widest hl-accent-text">Recovery</p>
+              <h1 className="text-xl font-semibold text-base-content">Set new password</h1>
+              <p className="text-xs hl-muted-text">Choose a strong password between 8 and 72 characters.</p>
+            </div>
+            {state.error && (
+              <div role="alert" className="rounded-lg border border-error/30 bg-error/10 p-3 text-xs text-error">
+                {state.error}
+              </div>
+            )}
+            {state.message && (
+              <div role="status" className="rounded-lg border border-success/30 bg-success/10 p-3 text-xs text-success">
+                {state.message}
+              </div>
+            )}
+            <form onSubmit={submit} className="space-y-4">
+              <Field
+                id="new-password"
+                label="New password"
+                type="password"
+                autoComplete="new-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <Field
+                id="confirm-password"
+                label="Confirm new password"
+                type="password"
+                autoComplete="new-password"
+                required
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+              />
+              <Button type="submit" fullWidth loading={state.busy}>
+                Save New Password
+              </Button>
+            </form>
+            <Link to="/login" className="inline-flex items-center gap-1.5 text-xs hl-muted-text hover:text-base-content">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Go to Sign In
+            </Link>
+          </Card>
+        </div>
+      </PageTransition>
+    </PublicPage>
+  );
 }
 
 export function VerifyEmailPage() {
   const { token = "" } = useParams();
   const submitted = useRef("");
-  const activeToken = useRef(token);
-  activeToken.current = token;
-  const [state, setState] = useState({ busy: true, message: "Checking your secure link…", error: "" });
+  const [state, setState] = useState({ busy: true, message: "Verifying your email link...", error: "" });
+
   useEffect(() => {
-    if (submitted.current === token) return;
+    if (!token || submitted.current === token) return;
     submitted.current = token;
-    api.post("/auth/verify-email", { token }).then(({ data }) => {
-      if (activeToken.current === token) setState({ busy: false, message: data.message || "Your email is verified.", error: "" });
-    }).catch((error) => {
-      if (activeToken.current === token) setState({ busy: false, message: "", error: apiErrorMessage(error, "This verification link is invalid or expired.") });
-    });
+    api
+      .post("/auth/verify-email", { token })
+      .then(({ data }) => {
+        setState({ busy: false, message: data.message || "Email verification successful.", error: "" });
+      })
+      .catch((err) => {
+        setState({
+          busy: false,
+          message: "",
+          error: apiErrorMessage(err, "This verification token is invalid or has expired."),
+        });
+      });
   }, [token]);
-  return <PublicPage className="info-page"><main className="info-main recovery-main"><span className="eyebrow">EMAIL VERIFICATION</span><div className={`status-illustration ${state.error ? "has-error" : ""}`}><Icon name={state.busy ? "clock" : state.error ? "alert" : "checkCircle"} size={32} /></div><h1>{state.busy ? "One moment…" : state.error ? "Link unavailable" : "You’re verified"}</h1>{state.error ? <div role="alert" className="form-banner form-banner-error">{state.error}</div> : <p role="status" className="info-lede">{state.message}</p>}<Button to="/login">Go to login <Icon name="arrowRight" /></Button></main></PublicPage>;
+
+  return (
+    <PublicPage>
+      <div className="mx-auto max-w-md px-4 py-16">
+        <Card className="text-center space-y-4">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-base-300 bg-base-200">
+            {state.busy ? (
+              <Clock className="h-6 w-6 text-primary animate-pulse" />
+            ) : state.error ? (
+              <AlertCircle className="h-6 w-6 text-error" />
+            ) : (
+              <CheckCircle2 className="h-6 w-6 text-success" />
+            )}
+          </div>
+          <h1 className="text-xl font-semibold text-base-content">
+            {state.busy ? "Verifying Account" : state.error ? "Verification Unavailable" : "Email Verified"}
+          </h1>
+          <p className={`text-sm ${state.error ? "text-error" : "hl-muted-text"}`}>
+            {state.error || state.message}
+          </p>
+          <Link to="/login" className="block pt-2">
+            <Button fullWidth>Continue to Sign In</Button>
+          </Link>
+        </Card>
+      </div>
+    </PublicPage>
+  );
 }
 
 export function HelpPage() {
   const { user } = useAuth();
-  const [form, setForm] = useState({ email: user?.email || "", category: "account", subject: "", message: "" });
+  const [form, setForm] = useState({
+    email: user?.email || "",
+    category: "account",
+    subject: "",
+    message: "",
+  });
   const [state, setState] = useState({ busy: false, success: "", error: "" });
-  function update(event) { setForm((value) => ({ ...value, [event.target.name]: event.target.value })); }
-  async function submit(event) {
-    event.preventDefault();
+
+  const update = (e) => setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+
+  const submit = async (e) => {
+    e.preventDefault();
     setState({ busy: true, success: "", error: "" });
     try {
       const { data } = await api.post("/support", { ...form, email: user?.email || form.email });
-      setState({ busy: false, success: data.message || "Your support request was received.", error: "" });
-      if (!user) setForm((value) => ({ ...value, subject: "", message: "" }));
-      toast.success("Support request sent");
-    } catch (error) {
-      setState({ busy: false, success: "", error: apiErrorMessage(error, "We could not send your request.") });
+      setState({
+        busy: false,
+        success: data.message || "Support ticket received by our safety team.",
+        error: "",
+      });
+      setForm((prev) => ({ ...prev, subject: "", message: "" }));
+      toast.success("Support ticket submitted");
+    } catch (err) {
+      setState({ busy: false, success: "", error: apiErrorMessage(err, "Unable to send support ticket.") });
     }
-  }
-  const content = <main className={`info-main help-main ${user ? "member-help-main" : ""}`}><PageHeading eyebrow="WE’RE HERE TO HELP" title="Tell us what you need." description="Send a note to the HeartLink support team. Please never include your password or payment details." /><div className="help-layout"><aside className="help-aside"><span className="help-aside-icon"><Icon name="message" size={23} /></span><h2>A real person will take a look.</h2><p>Choose the closest topic and share the steps that led to the issue.</p><div><Icon name="shield" /> Safety concerns are reviewed with care.</div><div><Icon name="clock" /> We’ll reply to the email on your account.</div></aside><form className="help-form" onSubmit={submit}>{state.error && <div className="form-banner form-banner-error" role="alert">{state.error}</div>}{state.success && <div className="form-banner form-banner-success" role="status">{state.success}</div>}{!user && <Field id="support-email" label="Email address" type="email" name="email" required maxLength={100} value={form.email} onChange={update} placeholder="you@example.com" />}<div className="field"><label htmlFor="support-category">What is this about?</label><select id="support-category" name="category" value={form.category} onChange={update}><option value="account">Account</option><option value="profile">Profile</option><option value="matching">Matching</option><option value="billing">Billing</option><option value="safety">Safety</option><option value="other">Something else</option></select></div><Field id="support-subject" label="Subject" name="subject" required maxLength={120} value={form.subject} onChange={update} placeholder="A short summary" /><div className="field"><label htmlFor="support-message">How can we help?</label><textarea id="support-message" name="message" rows={6} required minLength={10} maxLength={3000} value={form.message} onChange={update} placeholder="Share the details that will help us understand…" /><small className="field-hint">At least 10 characters, up to 3000.</small></div><Button type="submit" disabled={state.busy}>{state.busy ? "Sending request…" : "Send to support"} <Icon name="arrowRight" /></Button></form></div></main>;
-  return user ? content : <PublicPage className="info-page">{content}</PublicPage>;
+  };
+
+  const inner = (
+    <div className={user ? "space-y-6" : "mx-auto max-w-5xl px-4 py-12 sm:px-6 space-y-6"}>
+      <PageHeader
+        eyebrow="Support Desk"
+        title="Help & Safety Center"
+        subtitle="Submit an inquiry directly to our moderation and support operations team."
+      />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-4 space-y-4">
+          <Card>
+            <div className="space-y-3 text-xs hl-muted-text">
+              <div className="flex items-center gap-2 text-sm font-semibold text-base-content">
+                <ShieldCheck className="h-4 w-4 hl-accent-text" />
+                Direct Team Review
+              </div>
+              <p className="leading-relaxed">
+                Every ticket is logged in our Trust &amp; Ops queue and reviewed by staff. Never include your password in support notes.
+              </p>
+              <div className="pt-2 border-t hl-subtle-divider space-y-2">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-3.5 w-3.5 hl-accent-text" />
+                  <span>Safety concerns prioritized</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5 hl-accent-text" />
+                  <span>Replies sent to your account email</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+        <div className="lg:col-span-8">
+          <Card>
+            <form onSubmit={submit} className="space-y-4">
+              {state.error && (
+                <div role="alert" className="rounded-lg border border-error/30 bg-error/10 p-3 text-xs text-error">
+                  {state.error}
+                </div>
+              )}
+              {state.success && (
+                <div role="status" className="rounded-lg border border-success/30 bg-success/10 p-3 text-xs text-success">
+                  {state.success}
+                </div>
+              )}
+              {!user && (
+                <Field
+                  id="support-email"
+                  name="email"
+                  label="Contact email"
+                  type="email"
+                  required
+                  value={form.email}
+                  onChange={update}
+                  placeholder="you@example.com"
+                />
+              )}
+              <Select
+                id="support-category"
+                name="category"
+                label="Category"
+                value={form.category}
+                onChange={update}
+                options={[
+                  { value: "account", label: "Account & Sign In" },
+                  { value: "profile", label: "Profile & Photos" },
+                  { value: "matching", label: "Discovery & Matches" },
+                  { value: "billing", label: "Membership & Billing" },
+                  { value: "safety", label: "Safety & Harassment" },
+                  { value: "other", label: "Other Inquiry" },
+                ]}
+              />
+              <Field
+                id="support-subject"
+                name="subject"
+                label="Subject"
+                required
+                maxLength={120}
+                value={form.subject}
+                onChange={update}
+                placeholder="Brief summary of the issue"
+              />
+              <TextArea
+                id="support-message"
+                name="message"
+                label="Details"
+                required
+                minLength={10}
+                maxLength={3000}
+                rows={5}
+                value={form.message}
+                onChange={update}
+                placeholder="Describe what happened so our team can assist promptly..."
+              />
+              <Button type="submit" loading={state.busy} rightIcon={<ArrowRight className="h-4 w-4" />}>
+                Submit Support Ticket
+              </Button>
+            </form>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+
+  return user ? <PageTransition>{inner}</PageTransition> : <PublicPage>{inner}</PublicPage>;
 }
 
 export function NotFoundPage() {
-  return <PublicPage className="info-page"><main className="info-main not-found-main"><span className="eyebrow">404 · WRONG TURN</span><div className="not-found-mark"><Icon name="heart" size={34} /></div><h1>This page wandered off.</h1><p className="info-lede">Let’s get you back to something good.</p><Button to="/">Back to HeartLink <Icon name="arrowRight" /></Button></main></PublicPage>;
+  return (
+    <PublicPage>
+      <div className="mx-auto max-w-md px-4 py-20 text-center">
+        <Card className="space-y-4">
+          <Badge tone="neutral">404 Not Found</Badge>
+          <h1 className="text-2xl font-semibold text-base-content">Page not found</h1>
+          <p className="text-sm hl-muted-text">
+            The route you requested does not exist or has been relocated.
+          </p>
+          <div className="pt-2 flex justify-center gap-2">
+            <Link to="/">
+              <Button size="sm">Return Home</Button>
+            </Link>
+            <Link to="/dashboard">
+              <Button size="sm" variant="outline">Workspace</Button>
+            </Link>
+          </div>
+        </Card>
+      </div>
+    </PublicPage>
+  );
 }
