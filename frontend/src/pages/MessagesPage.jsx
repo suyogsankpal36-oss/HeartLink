@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   Ban,
@@ -45,6 +45,7 @@ function formatMessageTime(iso) {
 
 export function MessagesPage() {
   const { conversationId = "" } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, refreshProfile } = useAuth();
   const { socket, isConnected } = useSocket();
@@ -59,6 +60,13 @@ export function MessagesPage() {
   const [loadingThread, setLoadingThread] = useState(false);
   const [threadError, setThreadError] = useState("");
   const [draft, setDraft] = useState("");
+
+  useEffect(() => {
+    const opener = searchParams.get("opener");
+    if (opener) {
+      setDraft(opener);
+    }
+  }, [searchParams]);
   const [sending, setSending] = useState(false);
   const [typingUserId, setTypingUserId] = useState("");
   const [reportOpen, setReportOpen] = useState(false);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -19,7 +19,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { motion, useMotionValue, useTransform } from "framer-motion";
+import { AnimatePresence, motion, useAnimationControls, useMotionValue, useTransform } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import { api, apiErrorMessage, resolvePhotoUrl } from "../services/api";
 import { AppShell } from "../components/Layout";
@@ -144,6 +144,10 @@ function SwipeableDatingCard({
 }) {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
+  const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
+  const lastTapRef = useRef(0);
+
+  const controls = useAnimationControls();
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-220, 220], [-16, 16]);
   const likeOpacity = useTransform(x, [20, 90], [0, 1]);
@@ -152,7 +156,9 @@ function SwipeableDatingCard({
   useEffect(() => {
     setPhotoIndex(0);
     setShowDetails(false);
-  }, [profile?.id, profile?._id]);
+    x.set(0);
+    controls.set({ x: 0, rotate: 0, opacity: 1, scale: 1 });
+  }, [profile?.id, profile?._id, controls, x]);
 
   const photos = (
     Array.isArray(profile?.photos) && profile.photos.length > 0
@@ -168,28 +174,107 @@ function SwipeableDatingCard({
   ).filter(Boolean);
   const nextUrl = nextPhotos[0] ? resolvePhotoUrl(nextPhotos[0]) : "";
 
-  const handleDragEnd = (_e, info) => {
+  const triggerPass = useCallback(async () => {
     if (acting) return;
-    if (info.offset.x > 110) {
+    await controls.start({
+      x: -460,
+      rotate: -20,
+      opacity: 0,
+      transition: { duration: 0.26, ease: "easeOut" },
+    });
+    onPass();
+    x.set(0);
+    controls.set({ x: 0, rotate: 0, opacity: 1, scale: 1 });
+  }, [acting, controls, onPass, x]);
+
+  const triggerLike = useCallback(async () => {
+    if (acting) return;
+    await controls.start({
+      x: 460,
+      rotate: 20,
+      opacity: 0,
+      transition: { duration: 0.26, ease: "easeOut" },
+    });
+    onLike();
+    x.set(0);
+    controls.set({ x: 0, rotate: 0, opacity: 1, scale: 1 });
+  }, [acting, controls, onLike, x]);
+
+  const handleDragEnd = async (_e, info) => {
+    if (acting) return;
+    if (info.offset.x > 105) {
+      await controls.start({
+        x: 460,
+        rotate: 20,
+        opacity: 0,
+        transition: { duration: 0.22, ease: "easeOut" },
+      });
       onLike();
-    } else if (info.offset.x < -110) {
+      x.set(0);
+      controls.set({ x: 0, rotate: 0, opacity: 1, scale: 1 });
+    } else if (info.offset.x < -105) {
+      await controls.start({
+        x: -460,
+        rotate: -20,
+        opacity: 0,
+        transition: { duration: 0.22, ease: "easeOut" },
+      });
       onPass();
+      x.set(0);
+      controls.set({ x: 0, rotate: 0, opacity: 1, scale: 1 });
     }
   };
 
-  const handlePrevPhoto = (e) => {
+  const handleCardTap = (side, e) => {
     e.stopPropagation();
-    if (photos.length > 1) {
-      setPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
+    const now = Date.now();
+    if (now - lastTapRef.current < 320) {
+      // Double tap detected!
+      setShowDoubleTapHeart(true);
+      setTimeout(() => setShowDoubleTapHeart(false), 900);
+      triggerLike();
+    } else {
+      // Single tap -> photo navigation
+      if (side === "left") {
+        if (photos.length > 1) {
+          setPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
+        }
+      } else {
+        if (photos.length > 1) {
+          setPhotoIndex((prev) => (prev + 1) % photos.length);
+        }
+      }
     }
+    lastTapRef.current = now;
   };
 
-  const handleNextPhoto = (e) => {
-    e.stopPropagation();
-    if (photos.length > 1) {
-      setPhotoIndex((prev) => (prev + 1) % photos.length);
-    }
-  };
+  // Keyboard navigation on Discover Deck
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target?.tagName)) return;
+      if (acting) return;
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        triggerPass();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        triggerLike();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        onSpark();
+      } else if (e.key === "ArrowDown" || e.key === " " || e.key.toLowerCase() === "i") {
+        e.preventDefault();
+        setShowDetails((prev) => !prev);
+      } else if (e.key.toLowerCase() === "z" || e.key === "Backspace") {
+        e.preventDefault();
+        onRewind();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [acting, onSpark, onRewind, triggerLike, triggerPass]);
 
   return (
     <div className="w-full max-w-sm sm:max-w-md mx-auto flex flex-col items-center">
@@ -210,6 +295,7 @@ function SwipeableDatingCard({
 
         {/* Active Draggable Card */}
         <motion.div
+          animate={controls}
           style={{ x, rotate }}
           drag={acting ? false : "x"}
           dragConstraints={{ left: 0, right: 0 }}
@@ -217,6 +303,23 @@ function SwipeableDatingCard({
           onDragEnd={handleDragEnd}
           className="relative h-full w-full rounded-3xl overflow-hidden shadow-2xl border border-rose-500/20 bg-base-100 cursor-grab active:cursor-grabbing"
         >
+          {/* Double Tap Floating Heart Burst */}
+          <AnimatePresence>
+            {showDoubleTapHeart && (
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: [0, 1.35, 1], opacity: [0, 1, 0] }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="absolute inset-0 z-40 pointer-events-none flex items-center justify-center"
+              >
+                <div className="rounded-full bg-rose-500/35 p-6 backdrop-blur-xs shadow-2xl border border-white/50 animate-pulse">
+                  <Heart className="h-24 w-24 fill-rose-500 text-white drop-shadow-xl" />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* LIKE Stamp Overlay */}
           <motion.div
             style={{ opacity: likeOpacity }}
@@ -261,16 +364,16 @@ function SwipeableDatingCard({
             </div>
           )}
 
-          {/* Tap Zones for Next / Prev Photo */}
+          {/* Tap Zones for Next / Prev Photo and Double Tap */}
           <div
-            className="absolute inset-y-0 left-0 w-2/5 z-10 cursor-pointer"
-            onClick={handlePrevPhoto}
-            aria-label="Previous photo"
+            className="absolute inset-y-0 left-0 w-1/2 z-10 cursor-pointer"
+            onClick={(e) => handleCardTap("left", e)}
+            aria-label="Previous photo or double-tap to like"
           />
           <div
-            className="absolute inset-y-0 right-0 w-2/5 z-10 cursor-pointer"
-            onClick={handleNextPhoto}
-            aria-label="Next photo"
+            className="absolute inset-y-0 right-0 w-1/2 z-10 cursor-pointer"
+            onClick={(e) => handleCardTap("right", e)}
+            aria-label="Next photo or double-tap to like"
           />
 
           {/* Bottom Card Overlay */}
@@ -338,9 +441,9 @@ function SwipeableDatingCard({
         {/* Pass (✕) */}
         <button
           type="button"
-          onClick={onPass}
+          onClick={triggerPass}
           disabled={acting}
-          aria-label="Pass profile"
+          aria-label="Pass profile (Arrow Left)"
           className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-rose-500/25 bg-base-100 text-rose-500 shadow-xl hover:scale-110 active:scale-90 hover:bg-rose-500/10 transition-transform cursor-pointer disabled:opacity-40"
         >
           <X className="h-8 w-8 text-rose-500" strokeWidth={2.75} />
@@ -351,7 +454,7 @@ function SwipeableDatingCard({
           type="button"
           onClick={onSpark}
           disabled={acting}
-          aria-label="Send Spark note"
+          aria-label="Send Spark note (Arrow Up)"
           className="flex h-12 w-12 items-center justify-center rounded-full border border-sky-400/30 bg-base-100 text-sky-500 shadow-md hover:scale-110 active:scale-90 hover:bg-sky-500/10 transition-transform cursor-pointer disabled:opacity-40"
         >
           <Sparkles className="h-5 w-5" strokeWidth={2} />
@@ -360,9 +463,9 @@ function SwipeableDatingCard({
         {/* Like (♥) */}
         <button
           type="button"
-          onClick={onLike}
+          onClick={triggerLike}
           disabled={acting}
-          aria-label="Like profile"
+          aria-label="Like profile (Arrow Right or double-tap)"
           className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-tr from-rose-500 via-pink-500 to-rose-600 text-white shadow-2xl hover:scale-110 active:scale-90 shadow-rose-500/35 transition-transform cursor-pointer disabled:opacity-40"
         >
           <Heart className="h-8 w-8 fill-white text-white" strokeWidth={2} />
@@ -372,13 +475,32 @@ function SwipeableDatingCard({
         <button
           type="button"
           onClick={() => setShowDetails(!showDetails)}
-          aria-label="Toggle profile details"
+          aria-label="Toggle profile details (Space)"
           className={`flex h-12 w-12 items-center justify-center rounded-full border border-base-300 bg-base-100 shadow-md hover:scale-110 active:scale-90 transition-transform cursor-pointer ${
             showDetails ? "text-primary border-primary/40 bg-primary/10" : "text-base-content/70 hover:text-base-content"
           }`}
         >
           <Info className="h-5 w-5" strokeWidth={2} />
         </button>
+      </div>
+
+      {/* Desktop Keyboard Hints Bar */}
+      <div className="hidden sm:flex items-center justify-center gap-3.5 text-[11px] hl-muted-text pb-4 select-none">
+        <span className="inline-flex items-center gap-1">
+          <kbd className="px-1.5 py-0.5 rounded-md border border-base-300 bg-base-200 font-mono text-[10px]">←</kbd> Pass
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <kbd className="px-1.5 py-0.5 rounded-md border border-base-300 bg-base-200 font-mono text-[10px]">↑</kbd> Spark
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <kbd className="px-1.5 py-0.5 rounded-md border border-base-300 bg-base-200 font-mono text-[10px]">→</kbd> Like
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <kbd className="px-1.5 py-0.5 rounded-md border border-base-300 bg-base-200 font-mono text-[10px]">Space</kbd> Details
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <kbd className="px-1.5 py-0.5 rounded-md border border-base-300 bg-base-200 font-mono text-[10px]">Z</kbd> Rewind
+        </span>
       </div>
 
       {/* Expandable Hinge-style Profile Details */}
@@ -459,8 +581,152 @@ function SwipeableDatingCard({
   );
 }
 
+function QuickFilterModal({ open, onClose, currentParams, onApply }) {
+  const [distance, setDistance] = useState(Number(currentParams.get("distance")) || 50);
+  const [minAge, setMinAge] = useState(Number(currentParams.get("minAge")) || 18);
+  const [maxAge, setMaxAge] = useState(Number(currentParams.get("maxAge")) || 45);
+  const [gender, setGender] = useState(currentParams.get("genderPreference") || "all");
+  const [intent, setIntent] = useState(currentParams.get("lookingFor") || "all");
+
+  useEffect(() => {
+    if (open) {
+      setDistance(Number(currentParams.get("distance")) || 50);
+      setMinAge(Number(currentParams.get("minAge")) || 18);
+      setMaxAge(Number(currentParams.get("maxAge")) || 45);
+      setGender(currentParams.get("genderPreference") || "all");
+      setIntent(currentParams.get("lookingFor") || "all");
+    }
+  }, [open, currentParams]);
+
+  const handleSave = () => {
+    onApply({
+      distance: distance === 50 ? null : distance,
+      minAge: minAge === 18 ? null : minAge,
+      maxAge: maxAge === 45 ? null : maxAge,
+      genderPreference: gender === "all" ? null : gender,
+      lookingFor: intent === "all" ? null : intent,
+    });
+    onClose();
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Discovery Preferences 🎯"
+      subtitle="Tune your feed to find matches that align with your lifestyle and goals."
+      size="sm"
+      footer={
+        <>
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button size="sm" onClick={handleSave} leftIcon={<Check className="h-3.5 w-3.5" />}>
+            Apply Preferences
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4 py-1 text-xs">
+        <div>
+          <div className="flex justify-between font-semibold mb-1">
+            <span>Maximum Distance</span>
+            <span className="hl-accent-text font-bold">{distance} km</span>
+          </div>
+          <input
+            type="range"
+            min="5"
+            max="150"
+            step="5"
+            value={distance}
+            onChange={(e) => setDistance(Number(e.target.value))}
+            className="range range-xs range-primary w-full"
+          />
+        </div>
+
+        <div>
+          <div className="flex justify-between font-semibold mb-1">
+            <span>Age Range</span>
+            <span className="hl-accent-text font-bold">{minAge} – {maxAge}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min="18"
+              max={maxAge}
+              value={minAge}
+              onChange={(e) => setMinAge(Math.max(18, Number(e.target.value)))}
+              className="input input-bordered input-xs w-20 text-center"
+            />
+            <span className="hl-muted-text">to</span>
+            <input
+              type="number"
+              min={minAge}
+              max="75"
+              value={maxAge}
+              onChange={(e) => setMaxAge(Math.min(75, Number(e.target.value)))}
+              className="input input-bordered input-xs w-20 text-center"
+            />
+            <span className="text-[11px] hl-muted-text">years old</span>
+          </div>
+        </div>
+
+        <div>
+          <label className="block font-semibold mb-1">Interested in</label>
+          <div className="grid grid-cols-4 gap-1.5">
+            {[
+              { id: "all", label: "Everyone" },
+              { id: "women", label: "Women" },
+              { id: "men", label: "Men" },
+              { id: "non-binary", label: "Non-binary" },
+            ].map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => setGender(g.id)}
+                className={`py-1.5 px-2 rounded-lg text-center font-medium border text-[11px] transition-all cursor-pointer ${
+                  gender === g.id
+                    ? "border-primary bg-primary text-white shadow-xs"
+                    : "border-base-300 bg-base-100 hover:border-primary/50 text-base-content"
+                }`}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block font-semibold mb-1">Looking for</label>
+          <div className="grid grid-cols-4 gap-1.5">
+            {[
+              { id: "all", label: "Any" },
+              { id: "relationship", label: "Long-term" },
+              { id: "friendship", label: "Friends" },
+              { id: "casual", label: "Casual" },
+            ].map((i) => (
+              <button
+                key={i.id}
+                type="button"
+                onClick={() => setIntent(i.id)}
+                className={`py-1.5 px-2 rounded-lg text-center font-medium border text-[11px] transition-all cursor-pointer ${
+                  intent === i.id
+                    ? "border-primary bg-primary text-white shadow-xs"
+                    : "border-base-300 bg-base-100 hover:border-primary/50 text-base-content"
+                }`}
+              >
+                {i.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function DiscoverPage() {
-  const { refreshProfile } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -472,6 +738,7 @@ export function DiscoverPage() {
   const [noteText, setNoteText] = useState("");
   const [matchResult, setMatchResult] = useState(null);
   const [reportTarget, setReportTarget] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const searchQuery = searchParams.get("search") || "";
   const lookingFor = searchParams.get("lookingFor") || "all";
@@ -587,6 +854,15 @@ export function DiscoverPage() {
     setSearchParams(next);
   };
 
+  const handleApplyPreferences = (updates) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(updates).forEach(([key, val]) => {
+      if (val === null || val === undefined) next.delete(key);
+      else next.set(key, String(val));
+    });
+    setSearchParams(next);
+  };
+
   return (
     <AppShell
       title="Discover"
@@ -602,11 +878,14 @@ export function DiscoverPage() {
           >
             Rewind Pass
           </Button>
-          <Link to="/search">
-            <Button variant="outline" size="sm" leftIcon={<SlidersHorizontal className="h-3.5 w-3.5" />}>
-              Filters
-            </Button>
-          </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setFilterOpen(true)}
+            leftIcon={<SlidersHorizontal className="h-3.5 w-3.5" />}
+          >
+            Filters
+          </Button>
         </>
       }
     >
@@ -712,7 +991,7 @@ export function DiscoverPage() {
         />
       </Modal>
 
-      {/* Mutual Match Modal */}
+      {/* Mutual Match Celebration Modal */}
       <Modal
         open={Boolean(matchResult)}
         onClose={() => setMatchResult(null)}
@@ -738,30 +1017,98 @@ export function DiscoverPage() {
         }
       >
         {matchResult && (
-          <div className="flex flex-col items-center text-center space-y-3 py-3">
-            <div className="relative">
-              <Avatar
-                src={matchResult.user?.profilePhoto || matchResult.user?.photos?.[0]}
-                name={matchResult.user?.name}
-                size="2xl"
-                verified={matchResult.user?.isVerified}
-                className="ring-4 ring-rose-500/30"
-              />
-              <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-rose-500 text-white shadow-md">
-                <Heart className="h-4 w-4 fill-white" />
-              </span>
+          <div className="relative flex flex-col items-center text-center space-y-3.5 py-2 overflow-hidden">
+            {/* Confetti Particles */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              {[...Array(18)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ x: 0, y: 0, scale: 0, opacity: 1 }}
+                  animate={{
+                    x: Math.sin(i * 0.7) * 130,
+                    y: -100 + ((i % 5) * 50),
+                    scale: [0, 1.2, 0.8],
+                    rotate: i * 45,
+                    opacity: [1, 1, 0],
+                  }}
+                  transition={{ duration: 1.5, ease: "easeOut" }}
+                  className={`absolute top-1/2 left-1/2 h-2.5 w-2.5 rounded-full ${
+                    ["bg-rose-500", "bg-pink-400", "bg-sky-400", "bg-amber-400", "bg-emerald-400", "bg-purple-500"][i % 6]
+                  }`}
+                />
+              ))}
             </div>
+
+            {/* Overlapping Avatars with Center Heart */}
+            <div className="relative flex items-center justify-center pt-2">
+              <div className="relative -mr-3 z-10 transition-transform hover:scale-105">
+                <Avatar
+                  src={user?.photos?.[0] || user?.profilePhoto}
+                  name={user?.name || "You"}
+                  size="2xl"
+                  className="ring-4 ring-rose-500/40 shadow-xl"
+                />
+              </div>
+              <div className="relative z-20 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-rose-500 to-pink-500 text-white shadow-lg ring-4 ring-base-100 animate-pulse">
+                <Heart className="h-5 w-5 fill-white" />
+              </div>
+              <div className="relative -ml-3 z-10 transition-transform hover:scale-105">
+                <Avatar
+                  src={matchResult.user?.photos?.[0] || matchResult.user?.profilePhoto}
+                  name={matchResult.user?.name}
+                  size="2xl"
+                  verified={matchResult.user?.isVerified}
+                  className="ring-4 ring-pink-500/40 shadow-xl"
+                />
+              </div>
+            </div>
+
             <div>
-              <p className="text-lg font-bold text-base-content">
+              <p className="text-xl font-bold text-base-content">
                 You and {matchResult.user?.name} liked each other!
               </p>
               <p className="text-xs hl-muted-text mt-1 max-w-xs mx-auto">
-                The spark is mutual. Break the ice with a thoughtful message or fun question.
+                The spark is mutual. Start the conversation with a fun opener below.
               </p>
+            </div>
+
+            {/* Icebreaker Suggestions */}
+            <div className="w-full space-y-1.5 text-left pt-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wider hl-muted-text text-center">
+                Suggested Icebreakers
+              </p>
+              {[
+                "Hey! Loved your profile, how's your week going? ✨",
+                "We matched! What's your favorite spot in town? ☕",
+                `Hi! Looks like we both love ${matchResult.user?.interests?.[0] || "great music"} 🙌`,
+              ].map((promptText, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    const mId = matchResult?.matchId;
+                    setMatchResult(null);
+                    navigate(`/messages/${mId}?opener=${encodeURIComponent(promptText)}`);
+                  }}
+                  className="w-full text-xs rounded-xl border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/15 p-2.5 text-base-content transition-all text-left flex items-center justify-between group cursor-pointer"
+                >
+                  <span className="line-clamp-1">{promptText}</span>
+                  <span className="text-primary opacity-0 group-hover:opacity-100 transition-opacity font-semibold ml-2 shrink-0">
+                    Send →
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
         )}
       </Modal>
+
+      <QuickFilterModal
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        currentParams={searchParams}
+        onApply={handleApplyPreferences}
+      />
 
       <ReportDialog
         open={Boolean(reportTarget)}
