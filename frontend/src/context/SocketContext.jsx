@@ -2,12 +2,12 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { toast } from "react-hot-toast";
 import { useAuth } from "./AuthContext.jsx";
-import { API_ORIGIN, getAccessToken, onTokenChanged, refreshSession } from "../services/api.js";
+import { SOCKET_URL, expireSession, getAccessToken, onTokenChanged, refreshSession } from "../services/api.js";
 
 const SocketContext = createContext(null);
 
 export function SocketProvider({ children }) {
-  const { user, refreshProfile } = useAuth();
+  const { user, refreshProfile, authLoading } = useAuth();
   const userId = user?.id || user?._id || null;
   const refreshProfileRef = useRef(refreshProfile);
   refreshProfileRef.current = refreshProfile;
@@ -16,7 +16,10 @@ export function SocketProvider({ children }) {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    if (!userId) {
+    // A socket is never opened for a public visit, while auth is restoring, or
+    // without an access token. This prevents the startup WebSocket errors that
+    // occurred before authentication had completed.
+    if (authLoading || !userId || !getAccessToken()) {
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
@@ -26,50 +29,72 @@ export function SocketProvider({ children }) {
       return undefined;
     }
 
-    const token = getAccessToken();
-    const socket = io(API_ORIGIN, {
-      auth: { token },
+    let disposed = false;
+    let authRecoveryAttempted = false;
+    let authRecoveryInFlight = false;
+
+    const socket = io(SOCKET_URL, {
+      // Resolve the token at every handshake so a rotated access token is used
+      // without constructing another Socket.IO client.
+      auth: (callback) => callback({ token: getAccessToken() }),
       transports: ["websocket", "polling"],
+      withCredentials: true,
+      autoConnect: false,
       reconnection: true,
-      reconnectionAttempts: Infinity,
+      reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
+      timeout: 10000,
     });
     socketRef.current = socket;
     setSocketInstance(socket);
 
+    const recoverSocketAuthorization = async () => {
+      if (disposed || authRecoveryInFlight) return;
+      if (authRecoveryAttempted) {
+        socket.disconnect();
+        expireSession();
+        return;
+      }
+
+      authRecoveryAttempted = true;
+      authRecoveryInFlight = true;
+      // Stop the manager before rotating the token so automatic reconnection
+      // cannot race the explicit reconnect below.
+      socket.io.opts.reconnection = false;
+      socket.disconnect();
+      try {
+        const fresh = await refreshSession();
+        if (!fresh?.accessToken || disposed || socketRef.current !== socket) {
+          return;
+        }
+        socket.io.opts.reconnection = true;
+        socket.connect();
+      } catch {
+        if (!disposed) expireSession();
+      } finally {
+        authRecoveryInFlight = false;
+      }
+    };
+
     socket.on("connect", () => {
+      if (disposed) return;
+      authRecoveryAttempted = false;
       setIsConnected(true);
     });
 
-    socket.on("disconnect", async (reason) => {
+    socket.on("disconnect", (reason) => {
       setIsConnected(false);
       if (reason === "io server disconnect") {
-        try {
-          const fresh = await refreshSession();
-          if (socketRef.current && fresh?.accessToken) {
-            socketRef.current.auth.token = fresh.accessToken;
-            socketRef.current.connect();
-          }
-        } catch {
-          // Handled by sessionExpiredHandler
-        }
+        recoverSocketAuthorization();
       }
     });
 
-    socket.on("connect_error", async (error) => {
+    socket.on("connect_error", (error) => {
       setIsConnected(false);
       const msg = error?.message || "";
-      if (msg.includes("Unauthorized") || msg.includes("token") || msg.includes("Authentication")) {
-        try {
-          const fresh = await refreshSession();
-          if (socketRef.current && fresh?.accessToken) {
-            socketRef.current.auth.token = fresh.accessToken;
-            socketRef.current.connect();
-          }
-        } catch {
-          // Handled by sessionExpiredHandler
-        }
+      if (/unauthorized|token|authentication|invalid/i.test(msg)) {
+        recoverSocketAuthorization();
       }
     });
 
@@ -111,22 +136,22 @@ export function SocketProvider({ children }) {
     });
 
     const unsubscribeToken = onTokenChanged((newToken) => {
-      if (socketRef.current) {
-        socketRef.current.auth.token = newToken;
-        if (newToken && !socketRef.current.connected) {
-          socketRef.current.connect();
-        }
+      if (!newToken && socketRef.current === socket) {
+        socket.disconnect();
       }
     });
 
+    socket.connect();
+
     return () => {
+      disposed = true;
       unsubscribeToken();
       socket.disconnect();
       socketRef.current = null;
       setSocketInstance(null);
       setIsConnected(false);
     };
-  }, [userId]);
+  }, [authLoading, userId]);
 
   return (
     <SocketContext.Provider value={{ socket: socketInstance, isConnected }}>

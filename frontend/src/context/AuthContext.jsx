@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { api, hasSessionHint, pingBackend, refreshSession, setAccessToken, setRefreshToken, setSessionExpiredHandler } from "../services/api";
+import { api, hasSessionHint, pingBackend, refreshSession, setAccessToken, setSessionExpiredHandler } from "../services/api";
 
 const AuthContext = createContext(null);
 
@@ -11,7 +11,6 @@ export function AuthProvider({ children }) {
 
   const clearSession = useCallback(() => {
     setAccessToken(null);
-    setRefreshToken(null);
     setUser(null);
     setStats({});
   }, []);
@@ -122,7 +121,6 @@ export function AuthProvider({ children }) {
     const { data } = await api.post(endpoint, payload);
     if (data.accessToken) {
       setAccessToken(data.accessToken);
-      if (data.refreshToken) setRefreshToken(data.refreshToken);
       setUser(data.user);
       setStats({});
       setBackendAvailable(true);
@@ -134,7 +132,6 @@ export function AuthProvider({ children }) {
     const { data } = await api.post("/auth/google", { idToken, ...profile });
     if (data.accessToken) {
       setAccessToken(data.accessToken);
-      if (data.refreshToken) setRefreshToken(data.refreshToken);
       setUser(data.user);
       setStats({});
       setBackendAvailable(true);

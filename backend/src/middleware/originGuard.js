@@ -20,7 +20,8 @@ function originGuard(allowedOrigins) {
     if (!origin) return next();
 
     const normalizedOrigin = origin.replace(/\/+$/, "");
-    if (!normalizedOrigins.has(normalizedOrigin) && !isLocalDevelopmentOrigin(normalizedOrigin)) {
+    const isNetlifyDeployment = /^https:\/\/([a-z0-9-]+--)?hilarious-parfait-3bfc2c\.netlify\.app$/i.test(normalizedOrigin);
+    if (!normalizedOrigins.has(normalizedOrigin) && !isLocalDevelopmentOrigin(normalizedOrigin) && !isNetlifyDeployment) {
       return res.status(403).json({ message: "Request origin is not allowed." });
     }
 

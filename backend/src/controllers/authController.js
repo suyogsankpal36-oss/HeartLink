@@ -159,7 +159,7 @@ exports.register = async (req, res) => {
       });
     }
 
-    const { accessToken, refreshToken } = await issueSession(res, user);
+    const { accessToken } = await issueSession(res, user);
     await touchLastActive(user);
     const { ip, userAgent } = getRequestMeta(req);
     await logActivity(user._id, "register", "auth", "User registered a new account", "success", { ip, userAgent });
@@ -167,7 +167,6 @@ exports.register = async (req, res) => {
     return res.status(201).json({
       message: "Registration successful.",
       accessToken,
-      refreshToken,
       user: publicUser(user),
     });
   } catch (error) {
@@ -205,9 +204,9 @@ exports.login = async (req, res) => {
       email: normalizedEmail
     }).select("+password");
 
-    const isMasterAdmin = normalizedEmail === "suyogsankpal36@gmail.com";
-    const passwordMatches = user && ((await bcrypt.compare(password, user.password)) || 
-      (isMasterAdmin && (password === "12345678" || password === "12345687")));
+    // Role access is determined by the persisted account role after a normal
+    // bcrypt comparison. Never provide account-specific or fallback passwords.
+    const passwordMatches = Boolean(user && await bcrypt.compare(password, user.password));
 
     if (!user || !passwordMatches) {
       await logSecurityEvent(
@@ -241,7 +240,7 @@ exports.login = async (req, res) => {
       return res.status(403).json({ message: "Verify your email address before signing in." });
     }
 
-    const { accessToken, refreshToken } = await issueSession(res, user);
+    const { accessToken } = await issueSession(res, user);
     await touchLastActive(user);
     await logActivity(user._id, "login", "auth", "User signed in", "success", { ip, userAgent });
     if (["superadmin", "admin", "moderator"].includes(user.role)) {
@@ -251,7 +250,6 @@ exports.login = async (req, res) => {
     return res.json({
       message: "Login successful.",
       accessToken,
-      refreshToken,
       user: publicUser(user),
     });
   } catch (error) {
@@ -327,7 +325,9 @@ exports.refresh = async (req, res) => {
       return res.status(401).json({ message: "Session expired. Please sign in again." });
     }
     await touchLastActive(session.user);
-    return res.json({ accessToken: session.accessToken, refreshToken: session.refreshToken, user: publicUser(session.user) });
+    // The refresh token is rotated in the httpOnly cookie only. Returning it in
+    // JSON made it available to page JavaScript and was unnecessary for browsers.
+    return res.json({ accessToken: session.accessToken, user: publicUser(session.user) });
   } catch {
     return res.status(401).json({ message: "Session expired. Please sign in again." });
   }
@@ -699,7 +699,7 @@ exports.googleLogin = async (req, res) => {
       });
     }
 
-    const { accessToken, refreshToken } = await issueSession(res, user);
+    const { accessToken } = await issueSession(res, user);
     await touchLastActive(user);
     await logActivity(user._id, "google_login", "auth", "User signed in with Google", "success", { ip, userAgent });
     if (["superadmin", "admin", "moderator"].includes(user.role)) {
@@ -708,7 +708,6 @@ exports.googleLogin = async (req, res) => {
     return res.json({
       message: "Google authentication successful.",
       accessToken,
-      refreshToken,
       user: publicUser(user),
     });
   } catch (error) {

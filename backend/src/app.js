@@ -65,8 +65,10 @@ app.use(
       if (!origin) return callback(null, true);
 
       const normalizedOrigin = origin.replace(/\/+$/, "");
+      const isNetlifyDeployment = /^https:\/\/([a-z0-9-]+--)?hilarious-parfait-3bfc2c\.netlify\.app$/i.test(normalizedOrigin);
       const isAllowed =
         allowedOrigins.includes(normalizedOrigin) ||
+        isNetlifyDeployment ||
         originGuard.isLocalDevelopmentOrigin(normalizedOrigin);
 
       if (isAllowed) {

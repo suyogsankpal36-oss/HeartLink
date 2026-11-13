@@ -44,22 +44,35 @@ function cookieOptions() {
   if (sameSite === "none" && !production && process.env.COOKIE_SECURE !== "true") {
     sameSite = "lax";
   }
-  return {
+  const options = {
     httpOnly: true,
     secure: production || process.env.COOKIE_SECURE === "true",
     sameSite,
-    path: "/api",
+    // Auth is intentionally available through /auth, /api/auth, and /api/v1/auth.
+    // Scope the cookie to the API host, not only /api, so every supported refresh
+    // endpoint receives it after a deployment configuration change.
+    path: "/",
     maxAge: secondsFromDuration(REFRESH_TTL) * 1000,
   };
+  // For Render's default hostname this must stay unset, producing a host-only
+  // cookie. Set it only for an owned custom API domain, never a Netlify domain.
+  const domain = process.env.COOKIE_DOMAIN?.trim();
+  if (domain) options.domain = domain;
+  return options;
 }
 
 function setRefreshCookie(res, token) {
+  // Remove the pre-production cookie scoped to /api. Otherwise browsers may
+  // send two cookies with the same name and select an obsolete token first.
+  const { maxAge: _legacyMaxAge, ...legacyOptions } = cookieOptions();
+  res.clearCookie(REFRESH_COOKIE, { ...legacyOptions, path: "/api" });
   res.cookie(REFRESH_COOKIE, token, cookieOptions());
 }
 
 function clearRefreshCookie(res) {
   const { maxAge, ...options } = cookieOptions();
   res.clearCookie(REFRESH_COOKIE, options);
+  res.clearCookie(REFRESH_COOKIE, { ...options, path: "/api" });
 }
 
 function hashToken(token) {
@@ -68,12 +81,15 @@ function hashToken(token) {
 
 function readCookie(req, name) {
   const cookieHeader = req.headers.cookie || "";
+  let value = null;
   for (const part of cookieHeader.split(";")) {
     const separator = part.indexOf("=");
     if (separator < 0) continue;
-    if (part.slice(0, separator).trim() === name) return decodeURIComponent(part.slice(separator + 1).trim());
+    // Browsers order duplicate-name cookies by path length. The newer root
+    // cookie appears last, so prefer it while old /api cookies are migrating.
+    if (part.slice(0, separator).trim() === name) value = decodeURIComponent(part.slice(separator + 1).trim());
   }
-  return null;
+  return value;
 }
 
 function createAccessToken(userId, sessionId) {
@@ -165,4 +181,5 @@ module.exports = {
   revokeUserSessions,
   rotateSession,
   verifyAccessToken,
+  getRefreshCookieOptions: cookieOptions,
 };

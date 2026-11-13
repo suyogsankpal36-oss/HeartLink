@@ -2,16 +2,14 @@ import axios from "axios";
 
 /**
  * Normalizes the backend API URL.
- * Automatically handles cases where VITE_API_URL is configured without the /api/v1 suffix:
- * - "https://heartlink-api-36vt.onrender.com" -> "https://heartlink-api-36vt.onrender.com/api/v1"
- * - "https://heartlink-api-36vt.onrender.com/api" -> "https://heartlink-api-36vt.onrender.com/api/v1"
- * - "https://heartlink-api-36vt.onrender.com/api/v1" -> "https://heartlink-api-36vt.onrender.com/api/v1"
+ * Automatically handles a configured origin, /api, or /api/v1 value without
+ * embedding a deployment-specific API hostname in the frontend bundle.
  */
 function resolveApiUrl() {
   const raw = (import.meta.env.VITE_API_URL || "").trim().replace(/\/+$/, "");
   if (!raw || (import.meta.env.PROD && raw.includes("localhost"))) {
     return import.meta.env.PROD
-      ? "https://heartlink-api-36vt.onrender.com/api/v1"
+      ? "/api/v1"
       : "http://localhost:5000/api/v1";
   }
   if (raw.endsWith("/api/v1")) return raw;
@@ -21,6 +19,10 @@ function resolveApiUrl() {
 
 export const API_URL = resolveApiUrl();
 export const API_ORIGIN = new URL(API_URL, typeof window !== "undefined" ? window.location.origin : "http://localhost:5000").origin;
+export const SOCKET_URL = new URL(
+  import.meta.env.VITE_SOCKET_URL || API_ORIGIN,
+  typeof window !== "undefined" ? window.location.origin : "http://localhost:5000",
+).origin;
 
 if (import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
   console.warn("[HeartLink Production Notice] VITE_API_URL is not set. Ensure VITE_API_URL is configured in your hosting platform environment variables.");
@@ -51,7 +53,6 @@ export async function pingBackend() {
 }
 
 let accessToken = null;
-let refreshToken = null;
 let refreshFlight = null;
 let onSessionExpired = () => {};
 const tokenListeners = new Set();
@@ -64,7 +65,6 @@ export function onTokenChanged(callback) {
 export function setAccessToken(token) {
   accessToken = token || null;
   if (!token) {
-    refreshToken = null;
     setSessionHint(false);
   } else {
     setSessionHint(true);
@@ -78,16 +78,8 @@ export function setAccessToken(token) {
   });
 }
 
-export function setRefreshToken(token) {
-  refreshToken = token || null;
-}
-
 export function getAccessToken() {
   return accessToken;
-}
-
-export function getRefreshToken() {
-  return refreshToken;
 }
 
 export function setSessionExpiredHandler(handler) {
@@ -106,12 +98,11 @@ export async function refreshSession() {
     refreshFlight = axios
       .post(
         `${API_URL}/auth/refresh`,
-        refreshToken ? { refreshToken } : {},
+        {},
         { withCredentials: true, timeout: 20000 }
       )
       .then(({ data }) => {
         setAccessToken(data.accessToken);
-        if (data.refreshToken) setRefreshToken(data.refreshToken);
         return data;
       })
       .finally(() => {
@@ -119,6 +110,11 @@ export async function refreshSession() {
       });
   }
   return refreshFlight;
+}
+
+export function expireSession() {
+  setAccessToken(null);
+  onSessionExpired();
 }
 
 api.interceptors.request.use((config) => {
@@ -143,8 +139,7 @@ api.interceptors.response.use(
       original.headers.Authorization = `Bearer ${accessToken}`;
       return api(original);
     } catch (refreshError) {
-      setAccessToken(null);
-      onSessionExpired();
+      expireSession();
       return Promise.reject(refreshError);
     }
   },

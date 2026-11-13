@@ -64,15 +64,16 @@ A comprehensive, end-to-end synchronization audit across the entire **React 19 F
   - Created [netlify.toml](file:///c:/xampp/htdocs/HeartLink2/netlify.toml) configured for `base = "frontend"` and `publish = "dist"`.
   - Verified Vite automatically copies `_redirects` into `frontend/dist/_redirects`.
 
-### Issue 3: Cross-Origin Cookie Blocking and Runtime Crash in Non-Production
+### Issue 3: Refresh Cookie Scope and Cross-Origin Deployment
 - **Root Cause**:
   - In `backend/src/services/authTokens.js`, `cookieOptions()` threw an uncaught Error if `COOKIE_SAME_SITE=none` while `NODE_ENV !== "production"`.
-  - Modern browsers block third-party cookies across different domains (e.g., Netlify on `*.netlify.app` and Render on `*.onrender.com`), which would cause cookie-only token refresh to fail silently.
+- Modern browsers can block third-party cookies across different domains (for example, Netlify on `*.netlify.app` and Render on `*.onrender.com`).
 - **Repair**:
   - Updated `cookieOptions()` in [authTokens.js](file:///c:/xampp/htdocs/HeartLink2/backend/src/services/authTokens.js) to gracefully fall back to `lax` when running locally over HTTP instead of throwing an error.
-  - Implemented dual-token support: `rotateSession` reads the refresh token from HttpOnly cookies **and** supports `req.body.refreshToken` or `req.headers["x-refresh-token"]`.
-  - Returns `refreshToken` in response payload of `login`, `register`, `refresh`, and `googleLogin` in [authController.js](file:///c:/xampp/htdocs/HeartLink2/backend/src/controllers/authController.js).
-  - Updated [api.js](file:///c:/xampp/htdocs/HeartLink2/frontend/src/services/api.js) and [AuthContext.jsx](file:///c:/xampp/htdocs/HeartLink2/frontend/src/context/AuthContext.jsx) to maintain an in-memory refresh token fallback for cross-site environments.
+- Refresh cookies are scoped to `/`, so the supported `/auth`, `/api/auth`, and `/api/v1/auth` refresh aliases all receive the cookie. Legacy `/api`-scoped cookies are cleared during migration.
+- Refresh tokens are rotated only in an `HttpOnly`, `Secure` production cookie and are never returned to page JavaScript or stored in browser storage.
+- The client calls the canonical `/api/v1/auth/refresh` route with `withCredentials: true` and performs at most one refresh attempt for a failed protected request.
+- For browsers that block all third-party cookies, use same-site custom domains such as `app.example.com` (Netlify) and `api.example.com` (Render), or a verified same-origin backend proxy. A cookie-only session cannot bypass a user’s browser privacy setting safely.
 
 ### Issue 4: Untracked Git Status
 - **Root Cause**: `git status` returned `fatal: not a git repository`. Git is required for CI/CD deployments to Render and Netlify.
