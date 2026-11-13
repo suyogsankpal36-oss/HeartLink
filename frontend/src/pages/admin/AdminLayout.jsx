@@ -18,6 +18,7 @@ import {
   Settings,
   Shield,
   ShieldAlert,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
