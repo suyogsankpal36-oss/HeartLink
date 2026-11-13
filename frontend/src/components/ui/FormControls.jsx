@@ -13,6 +13,7 @@ export const Field = forwardRef(function Field(
     rightSlot = null,
     className = "",
     inputClassName = "",
+    children: _children,
     ...rest
   },
   ref,

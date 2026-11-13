@@ -3,8 +3,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   ArrowRight,
-  Eye,
-  EyeOff,
   Lock,
   Mail,
   Shield,
@@ -29,7 +27,6 @@ export function LoginPage() {
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState("");
@@ -201,66 +198,38 @@ export function LoginPage() {
             <Field
               id="login-identifier"
               label="Email or Username"
+              type="text"
+              name="identifier"
+              autoComplete="username email"
               required
+              placeholder="name@example.com"
+              value={identifier}
+              onChange={(e) => {
+                setIdentifier(e.target.value);
+                if (errors.identifier) setErrors((prev) => ({ ...prev, identifier: undefined }));
+              }}
               error={errors.identifier}
               hint="Enter the email associated with your account"
-            >
-              <div className="relative">
-                <input
-                  id="login-identifier"
-                  type="text"
-                  name="identifier"
-                  autoComplete="username email"
-                  required
-                  placeholder="name@example.com"
-                  value={identifier}
-                  onChange={(e) => {
-                    setIdentifier(e.target.value);
-                    if (errors.identifier) setErrors((prev) => ({ ...prev, identifier: undefined }));
-                  }}
-                  className={`input input-bordered w-full pl-10 text-sm rounded-xl transition-all ${
-                    errors.identifier ? "input-error" : "focus:input-primary"
-                  }`}
-                />
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-base-content/40 pointer-events-none" />
-              </div>
-            </Field>
+              leftIcon={<Mail className="h-4 w-4" />}
+            />
 
-            {/* Password Field with Show/Hide Toggle */}
+            {/* Password Field with built-in Reveal Toggle */}
             <Field
               id="login-password"
               label="Password"
+              type="password"
+              name="password"
+              autoComplete="current-password"
               required
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
+              }}
               error={errors.password}
-            >
-              <div className="relative">
-                <input
-                  id="login-password"
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  autoComplete="current-password"
-                  required
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
-                  }}
-                  className={`input input-bordered w-full pl-10 pr-10 text-sm rounded-xl transition-all ${
-                    errors.password ? "input-error" : "focus:input-primary"
-                  }`}
-                />
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-base-content/40 pointer-events-none" />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content transition-colors cursor-pointer"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </Field>
+              leftIcon={<Lock className="h-4 w-4" />}
+            />
 
             {/* Remember Me & Forgot Password */}
             <div className="flex items-center justify-between text-xs pt-1">
