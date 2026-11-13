@@ -152,6 +152,14 @@ app.use("/api/v1/auth/register", registrationLimiter);
 app.use("/api/v1/auth/refresh", refreshLimiter);
 app.use("/api/v1/auth/forgot-password", passwordRecoveryLimiter);
 app.use("/api/v1/auth/reset-password", passwordRecoveryLimiter);
+// Direct /auth alias rate limiting
+app.use("/auth", originGuard(allowedOrigins));
+app.use("/auth/login", loginLimiter);
+app.use("/auth/google", googleAuthLimiter);
+app.use("/auth/register", registrationLimiter);
+app.use("/auth/refresh", refreshLimiter);
+app.use("/auth/forgot-password", passwordRecoveryLimiter);
+app.use("/auth/reset-password", passwordRecoveryLimiter);
 app.use("/api", generalLimiter);
 app.use("/api/v1/conversations", messageLimiter);
 app.use("/api/messages", messageLimiter);
@@ -203,6 +211,7 @@ app.get("/api/live", (req, res) => res.status(200).json({ status: "alive", times
 
 // API Routes
 app.use("/api/auth", authRoutes);
+app.use("/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/discover", discoverRoutes);
 app.use("/api/likes", likeRoutes);
@@ -212,6 +221,7 @@ app.use("/api/blocks", blockRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/v1", v1Routes);
+app.use("/v1", v1Routes);
 
 // SRS Specification Endpoint Catalogue Aliases
 app.get("/api/users/me", authMiddleware, getProfile);

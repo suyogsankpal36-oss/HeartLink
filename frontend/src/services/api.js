@@ -1,7 +1,24 @@
 import axios from "axios";
 
-export const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api/v1").replace(/\/$/, "");
-export const API_ORIGIN = new URL(API_URL, window.location.origin).origin;
+/**
+ * Normalizes the backend API URL.
+ * Automatically handles cases where VITE_API_URL is configured without the /api/v1 suffix:
+ * - "https://heartlink-api-36vt.onrender.com" -> "https://heartlink-api-36vt.onrender.com/api/v1"
+ * - "https://heartlink-api-36vt.onrender.com/api" -> "https://heartlink-api-36vt.onrender.com/api/v1"
+ * - "https://heartlink-api-36vt.onrender.com/api/v1" -> "https://heartlink-api-36vt.onrender.com/api/v1"
+ */
+function resolveApiUrl() {
+  const raw = (import.meta.env.VITE_API_URL || "").trim().replace(/\/+$/, "");
+  if (!raw) {
+    return import.meta.env.PROD ? "/api/v1" : "http://localhost:5000/api/v1";
+  }
+  if (raw.endsWith("/api/v1")) return raw;
+  if (raw.endsWith("/api")) return `${raw}/v1`;
+  return `${raw}/api/v1`;
+}
+
+export const API_URL = resolveApiUrl();
+export const API_ORIGIN = new URL(API_URL, typeof window !== "undefined" ? window.location.origin : "http://localhost:5000").origin;
 
 if (import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
   console.warn("[HeartLink Production Notice] VITE_API_URL is not set. Ensure VITE_API_URL is configured in your hosting platform environment variables.");
