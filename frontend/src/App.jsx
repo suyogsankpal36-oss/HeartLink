@@ -38,6 +38,7 @@ const MessagesPage = lazy(() => import("./pages/MessagesPage.jsx").then((pages) 
 // Admin & Moderation console lazy imports (directly by chunk so charts only load on dashboard/analytics)
 const RequireAdmin = lazy(() => import("./pages/admin/AdminLayout.jsx").then((m) => ({ default: m.RequireAdmin })));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout.jsx").then((m) => ({ default: m.AdminLayout })));
+const SuperAdminDashboard = lazy(() => import("./pages/admin/SuperAdminDashboardPage.jsx").then((m) => ({ default: m.SuperAdminDashboardPage })));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard.jsx").then((m) => ({ default: m.AdminDashboard })));
 const UserManagement = lazy(() => import("./pages/admin/UserManagement.jsx").then((m) => ({ default: m.UserManagement })));
 const UserDetails = lazy(() => import("./pages/admin/UserManagement.jsx").then((m) => ({ default: m.UserDetails })));
@@ -136,7 +137,7 @@ function App() {
             element={
               <RoleProtectedRoute allowedRoles={["superadmin"]}>
                 <AdminLayout>
-                  <AdminDashboard />
+                  <SuperAdminDashboard />
                 </AdminLayout>
               </RoleProtectedRoute>
             }

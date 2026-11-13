@@ -112,13 +112,8 @@ export function PublicHeader() {
             </>
           ) : (
             <>
-              <Link to="/admin/login">
-                <Button variant="ghost" size="sm">
-                  Staff Portal
-                </Button>
-              </Link>
               <Link to="/login">
-                <Button variant="outline" size="sm">
+                <Button variant="ghost" size="sm">
                   Log in
                 </Button>
               </Link>
@@ -187,11 +182,6 @@ export function PublicHeader() {
                   Log In
                 </Button>
               </Link>
-              <Link to="/admin/login" onClick={() => setMobileOpen(false)}>
-                <Button variant="ghost" fullWidth leftIcon={<Shield className="h-4 w-4" />}>
-                  Staff Portal
-                </Button>
-              </Link>
             </div>
           )}
         </div>
@@ -246,8 +236,8 @@ export function PublicFooter() {
                 </Link>
               </li>
               <li>
-                <Link to="/admin/login" className="hover:text-base-content transition-colors">
-                  Staff &amp; Admin Portal
+                <Link to="/help" className="hover:text-base-content transition-colors">
+                  Safety &amp; Help
                 </Link>
               </li>
             </ul>

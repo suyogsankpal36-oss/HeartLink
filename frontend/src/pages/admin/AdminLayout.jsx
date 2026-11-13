@@ -55,6 +55,7 @@ const ADMIN_NAV_GROUPS = [
     section: "Overview",
     minRole: "admin",
     items: [
+      { label: "Control Center", to: "/super-admin/dashboard", icon: ShieldCheck, minRole: "superadmin" },
       { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard, minRole: "admin" },
       { label: "Analytics", to: "/admin/analytics", icon: BarChart3, minRole: "admin" },
     ],

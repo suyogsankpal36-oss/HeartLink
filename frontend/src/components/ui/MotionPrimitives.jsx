@@ -65,3 +65,30 @@ export function StaggerItem({ children, className = "" }) {
     </motion.div>
   );
 }
+
+export function ScalePress({ children, className = "", scale = 0.96, onClick }) {
+  return (
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale }}
+      transition={{ type: "spring", stiffness: 450, damping: 25 }}
+      className={className}
+      onClick={onClick}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+export function SlideUpView({ children, className = "", delay = 0 }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, delay, ease: [0.16, 1, 0.3, 1] }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}

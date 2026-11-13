@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Compass,
   Heart,
+  MapPin,
   MessageSquare,
   ShieldCheck,
   SlidersHorizontal,
@@ -14,7 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { api, apiErrorMessage } from "../services/api";
+import { api, apiErrorMessage, resolvePhotoUrl } from "../services/api";
 import { AppShell } from "../components/Layout";
 import {
   Avatar,
@@ -25,6 +26,7 @@ import {
   ErrorNotice,
   PageTransition,
   RoleBadge,
+  ScalePress,
   SkeletonCard,
   StaggerItem,
   StaggerList,
@@ -60,6 +62,7 @@ export function MemberDashboardPage() {
   const [matches, setMatches] = useState([]);
   const [incomingLikes, setIncomingLikes] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [suggestedProfiles, setSuggestedProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -67,14 +70,25 @@ export function MemberDashboardPage() {
     setLoading(true);
     setError("");
     try {
-      const [matchesRes, likesRes, notifRes] = await Promise.all([
+      const [matchesRes, likesRes, notifRes, profilesRes] = await Promise.allSettled([
         api.get("/matches"),
         api.get("/likes/received"),
         api.get("/notifications"),
+        api.get("/profiles?limit=3"),
       ]);
-      setMatches((matchesRes.data?.matches || []).slice(0, 4));
-      setIncomingLikes((likesRes.data?.likes || []).slice(0, 4));
-      setNotifications((notifRes.data?.notifications || []).slice(0, 4));
+
+      if (matchesRes.status === "fulfilled") {
+        setMatches((matchesRes.value.data?.matches || []).slice(0, 4));
+      }
+      if (likesRes.status === "fulfilled") {
+        setIncomingLikes((likesRes.value.data?.likes || []).slice(0, 4));
+      }
+      if (notifRes.status === "fulfilled") {
+        setNotifications((notifRes.value.data?.notifications || []).slice(0, 4));
+      }
+      if (profilesRes.status === "fulfilled") {
+        setSuggestedProfiles((profilesRes.value.data?.profiles || []).slice(0, 3));
+      }
       refreshProfile?.();
     } catch (err) {
       setError(apiErrorMessage(err, "Unable to load your dashboard summary."));
@@ -175,6 +189,121 @@ export function MemberDashboardPage() {
               />
             </StaggerItem>
           </StaggerList>
+        )}
+
+        {/* Quick Action Hub */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Link to="/discover" className="no-underline">
+            <ScalePress className="hl-surface-interactive p-4 rounded-xl flex items-center gap-3 bg-gradient-to-br from-rose-500/10 via-base-100 to-base-100 border border-rose-500/20 shadow-sm cursor-pointer">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-rose-500 to-pink-500 text-white flex items-center justify-center shrink-0 shadow-md">
+                <Heart className="h-5 w-5 fill-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-base-content">Discovery Deck</p>
+                <p className="text-[11px] hl-muted-text truncate">Swipe singles</p>
+              </div>
+            </ScalePress>
+          </Link>
+
+          <Link to="/matches" className="no-underline">
+            <ScalePress className="hl-surface-interactive p-4 rounded-xl flex items-center gap-3 bg-gradient-to-br from-indigo-500/10 via-base-100 to-base-100 border border-indigo-500/20 shadow-sm cursor-pointer">
+              <div className="h-10 w-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center shrink-0 shadow-md">
+                <Users className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-base-content">Mutual Matches</p>
+                <p className="text-[11px] hl-muted-text truncate">{matches.length} active</p>
+              </div>
+            </ScalePress>
+          </Link>
+
+          <Link to="/messages" className="no-underline">
+            <ScalePress className="hl-surface-interactive p-4 rounded-xl flex items-center gap-3 bg-gradient-to-br from-sky-500/10 via-base-100 to-base-100 border border-sky-500/20 shadow-sm cursor-pointer">
+              <div className="h-10 w-10 rounded-xl bg-sky-500 text-white flex items-center justify-center shrink-0 shadow-md">
+                <MessageSquare className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-base-content">Messages</p>
+                <p className="text-[11px] hl-muted-text truncate">Live chats</p>
+              </div>
+            </ScalePress>
+          </Link>
+
+          <Link to="/profile/edit" className="no-underline">
+            <ScalePress className="hl-surface-interactive p-4 rounded-xl flex items-center gap-3 bg-gradient-to-br from-purple-500/10 via-base-100 to-base-100 border border-purple-500/20 shadow-sm cursor-pointer">
+              <div className="h-10 w-10 rounded-xl bg-purple-500 text-white flex items-center justify-center shrink-0 shadow-md">
+                <UserCheck className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-base-content">My Profile</p>
+                <p className="text-[11px] hl-muted-text truncate">{profileChecklist.percent}% ready</p>
+              </div>
+            </ScalePress>
+          </Link>
+        </div>
+
+        {/* Suggested Singles Highlight */}
+        {suggestedProfiles.length > 0 && (
+          <Card
+            header={
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-rose-500 animate-pulse" />
+                  <div>
+                    <h2 className="text-sm font-semibold text-base-content">Suggested Compatible Singles</h2>
+                    <p className="text-xs hl-muted-text">Curated matches based on your intent &amp; lifestyle</p>
+                  </div>
+                </div>
+                <Link to="/discover">
+                  <Button size="xs" variant="outline" rightIcon={<ArrowRight className="h-3.5 w-3.5" />}>
+                    Swipe Deck
+                  </Button>
+                </Link>
+              </div>
+            }
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {suggestedProfiles.map((p) => {
+                const photo = p.profilePhoto || p.photos?.[0];
+                return (
+                  <Link
+                    key={p.id || p._id}
+                    to={`/profile/${p.id || p._id}`}
+                    className="group relative rounded-2xl overflow-hidden border border-rose-500/15 bg-base-100 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg no-underline block"
+                  >
+                    <div className="aspect-[4/5] w-full bg-base-300 relative overflow-hidden">
+                      {photo ? (
+                        <img
+                          src={resolvePhotoUrl(photo)}
+                          alt={p.name}
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-base-300 text-base-content/40">
+                          <Heart className="h-10 w-10" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent flex flex-col justify-end p-3.5 text-white">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-sm text-white drop-shadow-sm">
+                            {p.name}{p.age ? `, ${p.age}` : ""}
+                          </span>
+                          {p.isVerified && <ShieldCheck className="h-3.5 w-3.5 text-rose-400 shrink-0" />}
+                        </div>
+                        {p.city && (
+                          <p className="text-[11px] text-white/80 flex items-center gap-1 mt-0.5">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{p.city}</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </Card>
         )}
 
         {/* Main Asymmetric Bento Layout */}

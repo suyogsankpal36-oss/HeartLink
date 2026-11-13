@@ -39,4 +39,6 @@ export {
   FadeInView,
   StaggerList,
   StaggerItem,
+  ScalePress,
+  SlideUpView,
 } from "./MotionPrimitives";

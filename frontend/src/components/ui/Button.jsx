@@ -45,7 +45,7 @@ export const Button = forwardRef(function Button(
   const sizeClass = SIZE_CLASSES[size] || SIZE_CLASSES.md;
 
   const classes = [
-    "btn rounded-lg transition-all duration-150 inline-flex items-center justify-center gap-2 no-animation font-medium tracking-tight",
+    "btn rounded-xl transition-all duration-150 inline-flex items-center justify-center gap-2 font-medium tracking-tight active:scale-[0.98]",
     variantClass,
     sizeClass,
     fullWidth ? "w-full" : "",

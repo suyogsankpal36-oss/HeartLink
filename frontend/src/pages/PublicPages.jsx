@@ -768,17 +768,13 @@ export function AuthPage({ mode = "login" }) {
             )}
           </Card>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs hl-muted-text px-1">
+          <div className="text-center text-xs hl-muted-text px-1">
             <p>
               {signup ? "Already have an account?" : "New to HeartLink?"}{" "}
               <Link to={signup ? "/login" : "/signup"} className="font-semibold hl-accent-text hover:underline">
                 {signup ? "Sign in" : "Create account"}
               </Link>
             </p>
-            <Link to="/admin/login" className="font-medium hover:text-base-content transition-colors inline-flex items-center gap-1">
-              <Shield className="h-3.5 w-3.5" />
-              Staff / Admin login →
-            </Link>
           </div>
         </div>
       </main>
