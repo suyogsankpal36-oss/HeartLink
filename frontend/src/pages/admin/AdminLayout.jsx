@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
 import {
   Activity,
   ArrowLeft,
@@ -22,7 +21,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { api, apiErrorMessage } from "../../services/api";
+import { api } from "../../services/api";
 import {
   Avatar,
   Badge,
@@ -30,7 +29,6 @@ import {
   Card,
   Drawer,
   Dropdown,
-  Field,
   IconButton,
   Logo,
   PageSpinner,
@@ -118,7 +116,7 @@ export function RequireAdmin({ children, minRole = "moderator" }) {
   }
 
   if (!user) {
-    return <Navigate to="/admin/login" replace state={{ from: location.pathname }} />;
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
   if (!hasMinRole(user.role, minRole)) {
@@ -146,126 +144,8 @@ export function RequireAdmin({ children, minRole = "moderator" }) {
 }
 
 export function AdminLogin() {
-  const { user, authenticate, logout } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  if (user && hasMinRole(user.role, "moderator")) {
-    const target =
-      location.state?.from && location.state.from !== "/admin/login"
-        ? location.state.from
-        : user.role === "moderator"
-        ? "/admin/moderation"
-        : "/admin/dashboard";
-    return <Navigate to={target} replace />;
-  }
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setBusy(true);
-    try {
-      const result = await authenticate("login", { email: email.trim(), password });
-      const loggedUser = result?.user;
-      if (!loggedUser || !hasMinRole(loggedUser.role, "moderator")) {
-        await logout();
-        setError("This account does not hold Staff, Moderator, Admin, or Super Admin permissions.");
-        return;
-      }
-      toast.success(`Signed in as ${loggedUser.role}`);
-      navigate(loggedUser.role === "moderator" ? "/admin/moderation" : "/admin/dashboard", {
-        replace: true,
-      });
-    } catch (err) {
-      setError(apiErrorMessage(err, "Authentication failed. Check staff credentials."));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="min-h-dvh flex flex-col justify-center bg-base-200 px-4 py-12">
-      <div className="mx-auto w-full max-w-md space-y-6">
-        <div className="flex items-center justify-between">
-          <Logo badge="Console" />
-          <ThemeToggle compact />
-        </div>
-
-        <Card className="space-y-5">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 hl-accent-text" />
-              <span className="text-xs font-semibold uppercase tracking-widest hl-accent-text">
-                Role-Gated Access
-              </span>
-            </div>
-            <h1 className="text-xl font-semibold tracking-tight text-base-content">
-              Staff &amp; Admin Portal
-            </h1>
-            <p className="text-xs hl-muted-text">
-              Sign in with a Moderator, Admin, or Super Admin account. All actions are recorded in Admin Audit Logs.
-            </p>
-          </div>
-
-          {user && user.role === "member" && (
-            <div role="alert" className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs space-y-2">
-              <p className="font-medium text-base-content">
-                You are currently signed in as a Member ({user.email}).
-              </p>
-              <Button size="xs" variant="outline" onClick={logout}>
-                Sign out and switch to Staff account
-              </Button>
-            </div>
-          )}
-
-          {error && (
-            <div role="alert" className="rounded-lg border border-error/30 bg-error/10 p-3 text-xs text-error">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={submit} className="space-y-4">
-            <Field
-              id="admin-email"
-              label="Staff email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@heartlink.com"
-            />
-            <Field
-              id="admin-password"
-              label="Password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter staff password"
-            />
-            <Button type="submit" fullWidth size="lg" loading={busy}>
-              Sign In to Console
-            </Button>
-          </form>
-        </Card>
-
-        <div className="flex items-center justify-between text-xs hl-muted-text px-1">
-          <Link to="/login" className="hover:text-base-content inline-flex items-center gap-1">
-            <ArrowLeft className="h-3.5 w-3.5" /> Member login
-          </Link>
-          <Link to="/" className="hover:text-base-content">
-            HeartLink Home
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
+  return <Navigate to="/login" replace state={{ from: location.state?.from || "/admin/dashboard" }} />;
 }
 
 export function AdminLayout({ children = null }) {

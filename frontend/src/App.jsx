@@ -3,7 +3,13 @@ import { Navigate, Route, Routes, useLocation, useParams } from "react-router-do
 import { useAuth } from "./context/AuthContext.jsx";
 import { RequireMember } from "./components/Layout.jsx";
 import { PageSpinner } from "./components/ui.jsx";
+import {
+  AuthRedirect,
+  ProtectedRoute,
+  RoleProtectedRoute,
+} from "./components/ProtectedRoute.jsx";
 
+const LoginPage = lazy(() => import("./pages/LoginPage.jsx").then((m) => ({ default: m.LoginPage })));
 const LandingPage = lazy(() => import("./pages/PublicPages.jsx").then((pages) => ({ default: pages.LandingPage })));
 const AboutPage = lazy(() => import("./pages/PublicPages.jsx").then((pages) => ({ default: pages.AboutPage })));
 const AuthPage = lazy(() => import("./pages/PublicPages.jsx").then((pages) => ({ default: pages.AuthPage })));
@@ -31,7 +37,6 @@ const MessagesPage = lazy(() => import("./pages/MessagesPage.jsx").then((pages) 
 
 // Admin & Moderation console lazy imports (directly by chunk so charts only load on dashboard/analytics)
 const RequireAdmin = lazy(() => import("./pages/admin/AdminLayout.jsx").then((m) => ({ default: m.RequireAdmin })));
-const AdminLogin = lazy(() => import("./pages/admin/AdminLayout.jsx").then((m) => ({ default: m.AdminLogin })));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout.jsx").then((m) => ({ default: m.AdminLayout })));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard.jsx").then((m) => ({ default: m.AdminDashboard })));
 const UserManagement = lazy(() => import("./pages/admin/UserManagement.jsx").then((m) => ({ default: m.UserManagement })));
@@ -73,13 +78,6 @@ function MemberRoute({ children }) {
   return <RequireMember>{children}</RequireMember>;
 }
 
-function AuthRedirect({ mode }) {
-  const { user, authLoading } = useAuth();
-  if (authLoading) return <FullPageLoader label="Getting HeartLink ready" />;
-  if (user) return <Navigate to="/dashboard" replace />;
-  return <AuthPage mode={mode} />;
-}
-
 function HelpRoute() {
   const { user, authLoading } = useAuth();
   if (authLoading) return <FullPageLoader label="Getting HeartLink ready" />;
@@ -94,8 +92,11 @@ function HelpRoute() {
 
 function AdminIndexRedirect() {
   const { user } = useAuth();
+  if (user?.role === "superadmin") {
+    return <Navigate to="/super-admin/dashboard" replace />;
+  }
   if (user?.role === "moderator") {
-    return <Navigate to="/admin/moderation" replace />;
+    return <Navigate to="/moderator/dashboard" replace />;
   }
   return <Navigate to="/admin/dashboard" replace />;
 }
@@ -113,12 +114,13 @@ function App() {
         <Routes>
           {/* Public */}
           <Route path="/" element={<LandingPage />} />
-          <Route path="/signup" element={<AuthRedirect mode="signup" />} />
+          <Route path="/signup" element={<AuthRedirect mode="signup" component={AuthPage} />} />
           <Route path="/register" element={<Navigate to="/signup" replace />} />
           <Route path="/auth/register" element={<Navigate to="/signup" replace />} />
           <Route path="/auth/signup" element={<Navigate to="/signup" replace />} />
-          <Route path="/login" element={<AuthRedirect mode="login" />} />
+          <Route path="/login" element={<AuthRedirect mode="login" component={LoginPage} />} />
           <Route path="/auth/login" element={<Navigate to="/login" replace />} />
+          <Route path="/admin/login" element={<Navigate to="/login" replace />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/faq" element={<FAQPage />} />
           <Route path="/terms" element={<LegalPage type="terms" />} />
@@ -128,8 +130,32 @@ function App() {
           <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
           <Route path="/help" element={<HelpRoute />} />
 
+          {/* Role-Specific Direct Dashboards */}
+          <Route
+            path="/super-admin/dashboard"
+            element={
+              <RoleProtectedRoute allowedRoles={["superadmin"]}>
+                <AdminLayout>
+                  <AdminDashboard />
+                </AdminLayout>
+              </RoleProtectedRoute>
+            }
+          />
+          <Route path="/super-admin" element={<Navigate to="/super-admin/dashboard" replace />} />
+          <Route
+            path="/moderator/dashboard"
+            element={
+              <RoleProtectedRoute allowedRoles={["moderator", "admin", "superadmin"]}>
+                <AdminLayout>
+                  <ModeratorDashboardPage />
+                </AdminLayout>
+              </RoleProtectedRoute>
+            }
+          />
+          <Route path="/moderator" element={<Navigate to="/moderator/dashboard" replace />} />
+
           {/* Member workspace */}
-          <Route path="/dashboard" element={<MemberRoute><MemberDashboardPage /></MemberRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><MemberDashboardPage /></ProtectedRoute>} />
           <Route path="/discover" element={<MemberRoute><DiscoverPage /></MemberRoute>} />
           <Route path="/profile/edit" element={<MemberRoute><EditProfilePage /></MemberRoute>} />
           <Route path="/edit-profile" element={<Navigate to="/profile/edit" replace />} />
@@ -146,7 +172,6 @@ function App() {
           <Route path="/notifications" element={<MemberRoute><NotificationsPage /></MemberRoute>} />
 
           {/* Enterprise Admin / Moderation Console */}
-          <Route path="/admin/login" element={<AdminLogin />} />
           <Route
             path="/admin"
             element={
