@@ -123,21 +123,21 @@ export function LoginPage() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-5">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-rose-300">HeartLink Unified Portal</p>
-                <p className="text-sm font-bold text-white">One secure access point for Members, Moderators &amp; Administrators</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#F8DCE5]">Where Hearts Find Their Connection</p>
+                <p className="text-sm font-bold text-white">Discover &bull; Connect &bull; Match &bull; Love</p>
               </div>
             </div>
           </div>
 
           <div className="space-y-3">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-rose-300">
-              Enterprise Grade Security
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#F45B83]">
+              Romantic &bull; Elegant &bull; Trustworthy
             </p>
             <h2 className="text-2xl font-semibold tracking-tight text-white leading-snug">
-              Intentional Dating, Moderated Safety &amp; Control.
+              Intentional Dating, Verified Safety &amp; Chemistry.
             </h2>
             <p className="text-sm text-rose-200/70 leading-relaxed">
-              Sign in with your registered account. The system automatically detects your credentials and routes you to your authorized workspace.
+              Sign in to your Heartlink account. The system automatically detects your credentials and routes you directly to your authorized workspace.
             </p>
           </div>
 

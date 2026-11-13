@@ -995,12 +995,13 @@ export function DiscoverPage() {
       <Modal
         open={Boolean(matchResult)}
         onClose={() => setMatchResult(null)}
-        title="It's a Mutual Match! 💕"
+        title="It's a Match! 💕"
+        subtitle="Something beautiful might start here."
         size="sm"
         footer={
           <>
             <Button variant="outline" size="sm" onClick={() => setMatchResult(null)}>
-              Keep Swiping
+              Keep Discovering
             </Button>
             <Button
               size="sm"

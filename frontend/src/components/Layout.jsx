@@ -64,9 +64,11 @@ export function PublicHeader() {
   }, [location.pathname]);
 
   const navLinks = [
-    { label: "About", to: "/about" },
-    { label: "FAQ", to: "/faq" },
-    { label: "Help & Safety", to: "/help" },
+    { label: "Home", to: "/" },
+    { label: "Discover", to: "/discover" },
+    { label: "How It Works", to: "/#how-it-works" },
+    { label: "Safety", to: "/help" },
+    { label: "About Us", to: "/about" },
   ];
 
   return (
@@ -114,11 +116,11 @@ export function PublicHeader() {
             <>
               <Link to="/login">
                 <Button variant="ghost" size="sm">
-                  Log in
+                  Login
                 </Button>
               </Link>
               <Link to="/signup">
-                <Button size="sm">Join Free</Button>
+                <Button size="sm">Join Heartlink</Button>
               </Link>
             </>
           )}
@@ -175,11 +177,11 @@ export function PublicHeader() {
           ) : (
             <div className="flex flex-col gap-2">
               <Link to="/signup" onClick={() => setMobileOpen(false)}>
-                <Button fullWidth>Join Free</Button>
+                <Button fullWidth>Join Heartlink</Button>
               </Link>
               <Link to="/login" onClick={() => setMobileOpen(false)}>
                 <Button variant="outline" fullWidth>
-                  Log In
+                  Login
                 </Button>
               </Link>
             </div>
@@ -769,14 +771,14 @@ export function AppShell({ title = "", subtitle = "", actions = null, fullHeight
       {/* Mobile Bottom Navigation */}
       <nav
         aria-label="Mobile quick navigation"
-        className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t hl-subtle-divider bg-base-100/95 backdrop-blur-md px-2 py-1.5 flex items-center justify-around"
+        className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t hl-subtle-divider bg-base-100/95 backdrop-blur-md px-2 py-1.5 flex items-center justify-around shadow-lg"
       >
         {[
-          { label: "Home", to: "/dashboard", icon: LayoutDashboard },
           { label: "Discover", to: "/discover", icon: Compass },
           { label: "Likes", to: "/likes", icon: Heart, badge: stats?.likesReceivedCount },
-          { label: "Messages", to: "/messages", icon: MessageSquare },
-          { label: "Settings", to: "/settings", icon: Settings },
+          { label: "Matches", to: "/matches", icon: Users, badge: stats?.matchesCount },
+          { label: "Chat", to: "/messages", icon: MessageSquare, badge: stats?.unreadNotificationsCount },
+          { label: "Profile", to: "/dashboard", icon: UserCheck },
         ].map((item) => {
           const IconComp = item.icon;
           return (
@@ -784,15 +786,15 @@ export function AppShell({ title = "", subtitle = "", actions = null, fullHeight
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `relative flex flex-col items-center gap-0.5 rounded-lg px-2.5 py-1 text-[11px] font-medium ${
-                  isActive ? "hl-accent-text" : "hl-muted-text"
+                `relative flex flex-col items-center gap-0.5 rounded-xl px-3 py-1 text-[11px] font-medium transition-colors ${
+                  isActive ? "text-[#F45B83] font-semibold" : "hl-muted-text hover:text-base-content"
                 }`
               }
             >
-              <IconComp className="h-4 w-4" strokeWidth={1.75} />
+              <IconComp className="h-5 w-5" strokeWidth={1.8} />
               <span>{item.label}</span>
-              {item.badge > 0 && (
-                <span className="absolute top-0.5 right-1.5 h-2 w-2 rounded-full bg-rose-500" />
+              {Boolean(item.badge && item.badge > 0) && (
+                <span className="absolute top-0 right-2 h-2 w-2 rounded-full bg-[#F45B83] ring-2 ring-base-100" />
               )}
             </NavLink>
           );

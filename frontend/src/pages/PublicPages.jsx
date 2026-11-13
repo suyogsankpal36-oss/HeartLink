@@ -95,17 +95,22 @@ export function LandingPage() {
           <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
             <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:items-center">
               <div className="lg:col-span-6 space-y-6">
-                <Badge tone="primary" dot>
-                  Where Chemistry Begins
-                </Badge>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge tone="primary" dot>
+                    Where Hearts Find Their Connection
+                  </Badge>
+                  <span className="text-xs font-semibold tracking-wider uppercase text-[#F45B83]">
+                    Discover &bull; Connect &bull; Match &bull; Love
+                  </span>
+                </div>
                 <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight text-base-content leading-[1.12]">
-                  Find the one who matches{" "}
-                  <span className="bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 bg-clip-text text-transparent">
-                    your heart.
+                  Find Your Connection.{" "}
+                  <span className="bg-gradient-to-r from-[#F45B83] via-[#C2295D] to-[#681D3B] bg-clip-text text-transparent">
+                    Start Your Story.
                   </span>
                 </h1>
                 <p className="text-base sm:text-lg hl-muted-text max-w-xl leading-relaxed">
-                  HeartLink is the intentional dating app for singles looking for genuine connections. Meet verified people who share your values, passions, and dating goals—free from mindless swipe fatigue.
+                  Meet genuine people, discover meaningful connections, and find someone who makes every moment special.
                 </p>
 
                 <div className="flex flex-wrap items-center gap-3 pt-1">
@@ -119,12 +124,12 @@ export function LandingPage() {
                     <>
                       <Link to="/signup">
                         <Button size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
-                          Find Your Match
+                          Join Heartlink
                         </Button>
                       </Link>
                       <Link to="/login">
                         <Button variant="outline" size="lg">
-                          Log In
+                          Explore Heartlink
                         </Button>
                       </Link>
                     </>
@@ -383,6 +388,20 @@ export function AuthPage({ mode = "login" }) {
   const maxBirthDate = `${maxBirthDateValue.getFullYear()}-${String(
     maxBirthDateValue.getMonth() + 1,
   ).padStart(2, "0")}-${String(maxBirthDateValue.getDate()).padStart(2, "0")}`;
+
+  const getPasswordStrength = (pw) => {
+    if (!pw) return { score: 0, label: "", width: "0%", color: "" };
+    let points = 0;
+    if (pw.length >= 8) points++;
+    if (/[A-Z]/.test(pw)) points++;
+    if (/[0-9]/.test(pw)) points++;
+    if (/[^A-Za-z0-9]/.test(pw)) points++;
+    if (points <= 1) return { score: 1, label: "Weak", width: "25%", color: "bg-error" };
+    if (points === 2) return { score: 2, label: "Fair", width: "50%", color: "bg-warning" };
+    if (points === 3) return { score: 3, label: "Good", width: "75%", color: "bg-info" };
+    return { score: 4, label: "Strong", width: "100%", color: "bg-success" };
+  };
+  const pwStrength = getPasswordStrength(form.password);
 
   const update = (event) => {
     const { name, type, value, checked } = event.target;
@@ -683,14 +702,21 @@ export function AuthPage({ mode = "login" }) {
                   value={form.password}
                   onChange={update}
                   error={errors.password}
-                  hint={
-                    signup && !errors.password
-                      ? form.password.length >= 12
-                        ? "Strong password length"
-                        : "Use 8 to 72 characters"
-                      : ""
-                  }
                 />
+                {signup && form.password && (
+                  <div className="space-y-1 pt-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="hl-muted-text">Password strength:</span>
+                      <span className="font-semibold text-base-content">{pwStrength.label}</span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full bg-base-200 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${pwStrength.color}`}
+                        style={{ width: pwStrength.width }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {signup && (

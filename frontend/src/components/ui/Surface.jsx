@@ -6,14 +6,16 @@ import { resolvePhotoUrl } from "../../services/api";
 export function Logo({ to = "/", badge = "", compact = false, className = "", light = false, asDiv = false }) {
   const content = (
     <>
-      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 via-pink-500 to-rose-600 text-white shadow-sm shrink-0">
-        <Heart className="h-4 w-4 fill-white text-white" strokeWidth={1.75} />
+      <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#F45B83] via-[#C2295D] to-[#681D3B] text-white shadow-md shrink-0 ring-1 ring-white/20">
+        <Heart className="h-4 w-4 fill-white text-white drop-shadow-sm" strokeWidth={2} />
       </span>
       {!compact && (
         <span className="inline-flex items-center gap-2">
-          <span className="text-[15px] font-semibold tracking-tight text-base-content">HeartLink</span>
+          <span className={`text-[15px] font-bold tracking-tight ${light ? "text-white" : "text-base-content"}`}>
+            HEART<span className="text-[#F45B83]">LINK</span>
+          </span>
           {badge && (
-            <span className="rounded-md border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider hl-accent-text">
+            <span className="rounded-md border border-[#F45B83]/30 bg-[#F45B83]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#F45B83]">
               {badge}
             </span>
           )}

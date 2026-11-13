@@ -119,7 +119,7 @@ export function MemberDashboardPage() {
   return (
     <AppShell
       title={`${getGreeting()}, ${user?.name?.split(" ")[0] || "there"} ✨`}
-      subtitle="Your personal dating hub. See new admirers, chat with matches, and discover singles nearby."
+      subtitle="Where Hearts Find Their Connection. See new admirers, chat with mutual matches, and discover singles nearby."
       actions={
         <>
           <Link to="/profile/edit">
