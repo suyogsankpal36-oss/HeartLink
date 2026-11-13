@@ -7,16 +7,19 @@ import {
   CheckCheck,
   ChevronLeft,
   Flag,
+  Info,
+  MapPin,
   MessageSquare,
   Send,
   ShieldCheck,
   Smile,
   UserX,
   WifiOff,
+  X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/SocketContext";
-import { api, apiErrorMessage } from "../services/api";
+import { api, apiErrorMessage, resolvePhotoUrl } from "../services/api";
 import { AppShell } from "../components/Layout";
 import {
   Avatar,
@@ -72,6 +75,9 @@ export function MessagesPage() {
   const [reportOpen, setReportOpen] = useState(false);
   const [unmatchOpen, setUnmatchOpen] = useState(false);
   const [unmatchBusy, setUnmatchBusy] = useState(false);
+  const [showProfilePanel, setShowProfilePanel] = useState(false);
+  const [fullProfile, setFullProfile] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
   const messagesEndRef = useRef(null);
   const typingTimerRef = useRef(null);
@@ -397,6 +403,17 @@ export function MessagesPage() {
   const participant = activeConversation?.participant;
   const participantOnline = participant ? Boolean(onlineMap[String(participant.id)]) : false;
 
+  useEffect(() => {
+    if (showProfilePanel && participant?.id) {
+      setLoadingProfile(true);
+      api
+        .get(`/profiles/${participant.id}`)
+        .then(({ data }) => setFullProfile(data.profile || data.user || null))
+        .catch(() => setFullProfile(null))
+        .finally(() => setLoadingProfile(false));
+    }
+  }, [showProfilePanel, participant?.id]);
+
   return (
     <AppShell fullHeight>
       <div className="flex-1 flex min-h-0 h-[calc(100dvh-4rem)] overflow-hidden bg-base-200">
@@ -551,6 +568,15 @@ export function MessagesPage() {
                       <WifiOff className="h-3 w-3" /> HTTP fallback
                     </Badge>
                   )}
+                  <Button
+                    size="xs"
+                    variant={showProfilePanel ? "primary" : "ghost"}
+                    onClick={() => setShowProfilePanel((prev) => !prev)}
+                    leftIcon={<Info className="h-3.5 w-3.5" />}
+                    title="Toggle match profile"
+                  >
+                    <span className="hidden sm:inline">Profile</span>
+                  </Button>
                   <Button
                     size="xs"
                     variant="ghost"
@@ -731,6 +757,117 @@ export function MessagesPage() {
             </>
           )}
         </section>
+
+        {/* Match Profile Information Pane (Desktop Column 3) */}
+        {conversationId && showProfilePanel && participant && (
+          <aside
+            aria-label="Match Profile Overview"
+            className="hidden xl:flex flex-col w-80 lg:w-88 shrink-0 border-l hl-subtle-divider bg-base-100 overflow-y-auto"
+          >
+            <div className="p-4 border-b hl-subtle-divider flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-base-content flex items-center gap-2">
+                Match Details
+                {loadingProfile && <span className="loading loading-spinner loading-xs text-rose-500" />}
+              </span>
+              <IconButton
+                label="Close profile panel"
+                variant="ghost"
+                size="xs"
+                onClick={() => setShowProfilePanel(false)}
+              >
+                <X className="h-4 w-4" />
+              </IconButton>
+            </div>
+
+            <div className="p-5 space-y-5">
+              {/* Profile Photo */}
+              <div className="relative aspect-[4/5] w-full rounded-2xl overflow-hidden border border-base-300 shadow-md bg-base-200">
+                <img
+                  src={resolvePhotoUrl(fullProfile?.profilePhoto || participant.profilePhoto)}
+                  alt={participant.name}
+                  className="h-full w-full object-cover"
+                />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-4 text-white">
+                  <div className="flex items-center gap-2">
+                    <p className="text-base font-bold">
+                      {participant.name}
+                      {participant.age ? `, ${participant.age}` : ""}
+                    </p>
+                    <ShieldCheck className="h-4 w-4 text-rose-400 shrink-0" />
+                  </div>
+                  <p className="text-xs text-rose-200/90 flex items-center gap-1 mt-0.5">
+                    <MapPin className="h-3 w-3" />
+                    {participant.city || fullProfile?.city || "Nearby"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Status & Match Pill */}
+              <div className="flex items-center justify-between gap-2">
+                <Badge tone={participantOnline ? "success" : "neutral"} dot>
+                  {participantOnline ? "Active Now" : "Recently Active"}
+                </Badge>
+                {fullProfile?.lookingFor && (
+                  <Badge tone="primary">{fullProfile.lookingFor}</Badge>
+                )}
+              </div>
+
+              {/* Bio */}
+              {(fullProfile?.bio || participant.bio) && (
+                <div className="space-y-1 rounded-xl border hl-subtle-divider bg-base-200/40 p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider hl-muted-text">About</p>
+                  <p className="text-xs text-base-content leading-relaxed">
+                    {fullProfile?.bio || participant.bio}
+                  </p>
+                </div>
+              )}
+
+              {/* Interests */}
+              {Array.isArray(fullProfile?.interests) && fullProfile.interests.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider hl-muted-text">Interests</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {fullProfile.interests.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-lg border hl-subtle-divider bg-base-200/60 px-2 py-1 text-[11px] font-medium text-base-content"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="pt-2 border-t hl-subtle-divider space-y-2">
+                <Link to={`/profile/${participant.id}`} className="block">
+                  <Button size="sm" variant="outline" fullWidth>
+                    View Full Profile
+                  </Button>
+                </Link>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    onClick={() => setReportOpen(true)}
+                    leftIcon={<Flag className="h-3.5 w-3.5" />}
+                  >
+                    Report
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    onClick={() => setUnmatchOpen(true)}
+                    leftIcon={<UserX className="h-3.5 w-3.5" />}
+                  >
+                    Unmatch
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </aside>
+        )}
       </div>
 
       <ReportDialog open={reportOpen} user={participant} onClose={() => setReportOpen(false)} />

@@ -82,11 +82,12 @@ function calculateAgeFromIso(dob) {
 
 export function LandingPage() {
   const { user } = useAuth();
+  const [openFaq, setOpenFaq] = useState(null);
 
   return (
     <PublicPage>
       <PageTransition>
-        {/* Hero Section */}
+        {/* 1. Hero Section */}
         <section className="relative overflow-hidden border-b hl-subtle-divider">
           <div
             aria-hidden="true"
@@ -110,14 +111,14 @@ export function LandingPage() {
                   </span>
                 </h1>
                 <p className="text-base sm:text-lg hl-muted-text max-w-xl leading-relaxed">
-                  Meet genuine people, discover meaningful connections, and find someone who makes every moment special.
+                  Discover genuine people, create meaningful connections, and meet someone who makes every moment special.
                 </p>
 
                 <div className="flex flex-wrap items-center gap-3 pt-1">
                   {user ? (
                     <Link to="/dashboard">
                       <Button size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
-                        Explore Matches
+                        Explore Connections
                       </Button>
                     </Link>
                   ) : (
@@ -129,7 +130,7 @@ export function LandingPage() {
                       </Link>
                       <Link to="/login">
                         <Button variant="outline" size="lg">
-                          Explore Heartlink
+                          Explore Connections
                         </Button>
                       </Link>
                     </>
@@ -210,8 +211,8 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* How It Works */}
-        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        {/* 2. How Heartlink Works */}
+        <section id="how-it-works" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
           <div className="max-w-2xl mb-10">
             <p className="text-xs font-semibold uppercase tracking-widest text-rose-500 mb-2">
               How HeartLink Works
@@ -259,8 +260,218 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* Safety & Peace of Mind */}
-        <section className="border-y hl-subtle-divider bg-base-100/60">
+        {/* 3. Discover New People */}
+        <section className="border-t hl-subtle-divider bg-base-100/40">
+          <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+              <div className="lg:col-span-5 space-y-4">
+                <Badge tone="primary" dot>Curated Discovery</Badge>
+                <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-base-content">
+                  Discover genuine singles in your city who match your intentions.
+                </h2>
+                <p className="text-sm hl-muted-text leading-relaxed">
+                  Swipe through natural, photo-forward profiles with natural spring physics. Filter by verified age, relationship intentions, location, and lifestyle preferences.
+                </p>
+                <ul className="space-y-2 text-xs hl-muted-text pt-2">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <span>Fluid swipe gestures: pass left, like right, superlike up</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <span>Double-tap photo to trigger spontaneous heart animation</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <span>Rewind previous swipe with Instant Rewind capability</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="lg:col-span-7">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Card className="p-4 space-y-3 bg-base-100 border border-rose-500/20 shadow-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm text-base-content">Sophia, 26</span>
+                        <ShieldCheck className="h-4 w-4 text-rose-500" />
+                      </div>
+                      <Badge tone="success">98% Match</Badge>
+                    </div>
+                    <p className="text-xs hl-muted-text italic">
+                      "Looking for someone who appreciates weekend road trips and slow Sunday pour-overs."
+                    </p>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      <span className="rounded-md bg-base-200 px-2 py-0.5 text-[11px] text-base-content">Photography</span>
+                      <span className="rounded-md bg-base-200 px-2 py-0.5 text-[11px] text-base-content">Hiking</span>
+                      <span className="rounded-md bg-base-200 px-2 py-0.5 text-[11px] text-base-content">Indie Cinema</span>
+                    </div>
+                  </Card>
+                  <Card className="p-4 space-y-3 bg-base-100 border border-rose-500/20 shadow-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm text-base-content">Liam, 28</span>
+                        <ShieldCheck className="h-4 w-4 text-rose-500" />
+                      </div>
+                      <Badge tone="primary">94% Match</Badge>
+                    </div>
+                    <p className="text-xs hl-muted-text italic">
+                      "Architect by day, vinyl collector by night. Let&apos;s trade favorite records."
+                    </p>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      <span className="rounded-md bg-base-200 px-2 py-0.5 text-[11px] text-base-content">Architecture</span>
+                      <span className="rounded-md bg-base-200 px-2 py-0.5 text-[11px] text-base-content">Vinyl Records</span>
+                      <span className="rounded-md bg-base-200 px-2 py-0.5 text-[11px] text-base-content">Coffee</span>
+                    </div>
+                  </Card>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. Find Meaningful Connections */}
+        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-widest text-rose-500">
+              Values &amp; Lifestyle
+            </p>
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-base-content">
+              Find Meaningful Connections Built on Chemistry &amp; Shared Values.
+            </h2>
+            <p className="text-sm hl-muted-text leading-relaxed">
+              Dating is better when you connect on what matters most. HeartLink highlights shared conversation prompts, mutual values, and lifestyle preferences.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              { label: "Long-term Love", icon: Heart },
+              { label: "Active Lifestyle", icon: Sparkles },
+              { label: "World Travel", icon: Compass },
+              { label: "Book Enthusiasts", icon: UserCheck },
+              { label: "Foodie & Cooking", icon: Users },
+              { label: "Verified Safety", icon: ShieldCheck },
+            ].map((v) => {
+              const IconComp = v.icon;
+              return (
+                <div
+                  key={v.label}
+                  className="rounded-xl border hl-subtle-divider bg-base-100 p-4 text-center hover:border-rose-500/40 transition-colors shadow-xs"
+                >
+                  <IconComp className="h-5 w-5 text-rose-500 mx-auto mb-2" strokeWidth={1.75} />
+                  <p className="text-xs font-semibold text-base-content">{v.label}</p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 5. Real-Time Conversations */}
+        <section className="border-t hl-subtle-divider bg-base-100/60">
+          <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+              <div className="lg:col-span-6 space-y-4">
+                <Badge tone="primary" dot>Socket.IO Powered</Badge>
+                <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-base-content">
+                  Real-time conversations with instant typing &amp; reactions.
+                </h2>
+                <p className="text-sm hl-muted-text leading-relaxed">
+                  No awkward lags or cold unsolicited DMs. HeartLink conversations open exclusively when two people mutually swipe right. Enjoy live typing indicators, heart reactions, and read receipts.
+                </p>
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="rounded-lg border hl-subtle-divider bg-base-200/50 p-3">
+                    <p className="text-xs font-semibold text-base-content">Zero Cold Spam</p>
+                    <p className="text-[11px] hl-muted-text">Chats open only upon mutual like.</p>
+                  </div>
+                  <div className="rounded-lg border hl-subtle-divider bg-base-200/50 p-3">
+                    <p className="text-xs font-semibold text-base-content">Interactive Reactions</p>
+                    <p className="text-[11px] hl-muted-text">React with hearts, fire, and sparkles.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="lg:col-span-6">
+                <Card className="max-w-md mx-auto p-4 space-y-3 bg-base-100 shadow-xl border-rose-500/20">
+                  <div className="flex items-center justify-between border-b hl-subtle-divider pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="relative flex h-8 w-8 rounded-full bg-rose-500/20 items-center justify-center text-xs font-bold text-rose-500">
+                        E
+                        <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 border-2 border-base-100" />
+                      </span>
+                      <div>
+                        <p className="text-xs font-semibold text-base-content">Emma &bull; Mutual Match</p>
+                        <p className="text-[10px] text-emerald-500">Online now</p>
+                      </div>
+                    </div>
+                    <Badge tone="primary">Live Chat</Badge>
+                  </div>
+                  <div className="space-y-2 text-xs py-2">
+                    <div className="flex justify-start">
+                      <div className="bg-base-200 rounded-2xl rounded-bl-xs px-3.5 py-2 max-w-[80%] text-base-content">
+                        Hey! I saw you love indie cinema too. Have you seen the new festival release? 🎬
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <div className="bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-2xl rounded-br-xs px-3.5 py-2 max-w-[80%]">
+                        Yes! Watched it last weekend at the local theatre. Absolutely loved the cinematography! ✨
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[10px] hl-muted-text pt-1">
+                      <span className="inline-flex gap-1">
+                        <span className="h-1 w-1 rounded-full bg-rose-500 animate-bounce" />
+                        <span className="h-1 w-1 rounded-full bg-rose-500 animate-bounce [animation-delay:120ms]" />
+                        <span className="h-1 w-1 rounded-full bg-rose-500 animate-bounce [animation-delay:240ms]" />
+                      </span>
+                      <span>Emma is typing...</span>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 6. Why Choose Heartlink */}
+        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+          <div className="max-w-2xl mb-10">
+            <p className="text-xs font-semibold uppercase tracking-widest text-rose-500 mb-2">
+              The HeartLink Difference
+            </p>
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-base-content">
+              Why thousands of singles choose HeartLink every week.
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                title: "100% Mutual Consent",
+                desc: "No uninvited direct messages or intrusive solicitations. You only speak with people you have mutually chosen.",
+              },
+              {
+                title: "Strict 18+ Verification",
+                desc: "Every account validates age and date of birth at registration to ensure a mature and respectful dating environment.",
+              },
+              {
+                title: "Granular Privacy Controls",
+                desc: "Choose who sees you, hide your profile with 1 click, conceal exact location, or pause discovery whenever you want.",
+              },
+              {
+                title: "24/7 Human Moderation",
+                desc: "Our active moderation triage queue promptly investigates reports and suspends bad actors to protect your experience.",
+              },
+            ].map((col) => (
+              <Card key={col.title} className="p-5 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-base-content mb-2">{col.title}</h3>
+                  <p className="text-xs hl-muted-text leading-relaxed">{col.desc}</p>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* 7. Privacy and Safety */}
+        <section id="safety" className="border-t hl-subtle-divider bg-base-100/60">
           <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
               <div className="lg:col-span-5 space-y-4">
@@ -327,22 +538,61 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* Bottom CTA */}
+        {/* 8. Frequently Asked Questions (FAQ) */}
+        <section id="faq" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+          <div className="max-w-2xl mb-10">
+            <p className="text-xs font-semibold uppercase tracking-widest text-rose-500 mb-2">
+              Got Questions?
+            </p>
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-base-content">
+              Frequently Asked Questions
+            </h2>
+          </div>
+
+          <div className="space-y-3 max-w-3xl">
+            {FAQ_ITEMS.map(([q, a], idx) => {
+              const isOpen = openFaq === idx;
+              return (
+                <div
+                  key={q}
+                  className="rounded-xl border hl-subtle-divider bg-base-100 overflow-hidden transition-all"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaq(isOpen ? null : idx)}
+                    className="w-full text-left p-4 flex items-center justify-between gap-4 font-medium text-sm text-base-content hover:bg-base-200/50 cursor-pointer"
+                  >
+                    <span>{q}</span>
+                    <span className="text-rose-500 font-bold shrink-0">{isOpen ? "−" : "+"}</span>
+                  </button>
+                  {isOpen && (
+                    <div className="px-4 pb-4 pt-1 text-xs hl-muted-text leading-relaxed border-t hl-subtle-divider bg-base-200/20">
+                      {a}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 9. Final Call to Action */}
         <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-          <Card variant="elevated" className="bg-gradient-to-br from-rose-500/10 via-base-100 to-pink-500/10 border-rose-500/20">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 py-4 px-2">
-              <div className="space-y-1.5 max-w-xl">
-                <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-base-content">
-                  Ready to find your special person?
+          <Card variant="elevated" className="bg-gradient-to-br from-rose-500/15 via-base-100 to-pink-500/15 border-rose-500/30 shadow-2xl">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 py-6 px-4">
+              <div className="space-y-2 max-w-xl">
+                <Badge tone="primary" dot>Start Your Journey</Badge>
+                <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-base-content">
+                  Find Your Connection. Start Your Story.
                 </h2>
-                <p className="text-sm hl-muted-text">
-                  Join HeartLink for free today. Create your profile in under two minutes and meet someone wonderful.
+                <p className="text-sm hl-muted-text leading-relaxed">
+                  Join HeartLink for free today. Create your profile in under two minutes and meet someone wonderful who shares your chemistry and values.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3 shrink-0">
                 <Link to={user ? "/dashboard" : "/signup"}>
                   <Button size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
-                    {user ? "Explore Matches" : "Find Your Match Free"}
+                    {user ? "Explore Connections" : "Join Heartlink Free"}
                   </Button>
                 </Link>
                 <Link to="/faq">
