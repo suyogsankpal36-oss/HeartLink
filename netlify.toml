@@ -6,6 +6,8 @@
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--include=dev"
+  VITE_API_URL = "https://heartlink-api-36vt.onrender.com/api/v1"
+  VITE_SOCKET_URL = "https://heartlink-api-36vt.onrender.com"
 
 [[redirects]]
   from = "/*"

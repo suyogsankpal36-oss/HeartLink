@@ -9,8 +9,10 @@ import axios from "axios";
  */
 function resolveApiUrl() {
   const raw = (import.meta.env.VITE_API_URL || "").trim().replace(/\/+$/, "");
-  if (!raw) {
-    return import.meta.env.PROD ? "/api/v1" : "http://localhost:5000/api/v1";
+  if (!raw || (import.meta.env.PROD && raw.includes("localhost"))) {
+    return import.meta.env.PROD
+      ? "https://heartlink-api-36vt.onrender.com/api/v1"
+      : "http://localhost:5000/api/v1";
   }
   if (raw.endsWith("/api/v1")) return raw;
   if (raw.endsWith("/api")) return `${raw}/v1`;
