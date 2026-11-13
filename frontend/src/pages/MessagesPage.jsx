@@ -143,10 +143,15 @@ export function MessagesPage() {
   useEffect(() => {
     if (!socket) return undefined;
 
-    if (conversationId) {
-      socket.emit("join_chat", { matchId: conversationId });
-      socket.emit("mark_read", { matchId: conversationId });
-    }
+    const joinRoom = () => {
+      if (conversationId) {
+        socket.emit("join_chat", { matchId: conversationId });
+        socket.emit("mark_read", { matchId: conversationId });
+      }
+    };
+
+    joinRoom();
+    socket.on("connect", joinRoom);
 
     const onNewMessage = (payload) => {
       const incomingMatchId = String(payload.matchId || "");
@@ -227,6 +232,7 @@ export function MessagesPage() {
     socket.on("presence_update", onPresenceUpdate);
 
     return () => {
+      clearTimeout(typingTimerRef.current);
       if (conversationId) {
         if (isTypingRef.current) {
           socket.emit("stop_typing", { matchId: conversationId });
@@ -234,6 +240,7 @@ export function MessagesPage() {
         }
         socket.emit("leave_chat", { matchId: conversationId });
       }
+      socket.off("connect", joinRoom);
       socket.off("new_message", onNewMessage);
       socket.off("messages_read", onMessagesRead);
       socket.off("user_typing", onUserTyping);
@@ -297,7 +304,11 @@ export function MessagesPage() {
         }
       }
     } catch (err) {
-      toast.error(err?.message || apiErrorMessage(err, "Message could not be delivered."));
+      toast.error(
+        err?.response
+          ? apiErrorMessage(err, "Message could not be delivered.")
+          : err?.message || "Message could not be delivered.",
+      );
       setDraft(text);
     } finally {
       setSending(false);

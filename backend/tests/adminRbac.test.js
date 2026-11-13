@@ -258,3 +258,27 @@ test("adminController health endpoints never leak credentials and return expecte
     assert.equal(dbRes.data.connected, false);
   }
 });
+
+test("adminController rejects empty user name on updateUserProfile and invalid dates on log queries with 400", async () => {
+  const origUserFind = User.findById;
+  try {
+    const targetId = "650000000000000000000021";
+    User.findById = () => ({
+      select: async () => ({ _id: targetId, role: "member", name: "Existing", bio: "" }),
+    });
+    const emptyNameRes = makeMockRes();
+    await adminController.updateUserProfile(
+      { params: { id: targetId }, userId: "650000000000000000000010", user: { role: "admin" }, body: { name: "   " } },
+      emptyNameRes,
+    );
+    assert.equal(emptyNameRes.statusCode, 400, "Blank name should return 400 instead of Mongoose ValidationError 500");
+  } finally {
+    User.findById = origUserFind;
+  }
+
+  for (const fn of ["getActivities", "getSecurityEvents", "getAuditLogs"]) {
+    const res = makeMockRes();
+    await adminController[fn]({ query: { startDate: "not-a-date" } }, res);
+    assert.equal(res.statusCode, 400, `${fn} should return 400 for invalid startDate`);
+  }
+});

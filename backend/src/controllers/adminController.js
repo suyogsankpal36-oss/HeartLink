@@ -302,8 +302,16 @@ exports.getActivities = async (req, res) => {
     if (userId && mongoose.Types.ObjectId.isValid(userId)) filter.userId = userId;
     if (startDate || endDate) {
       filter.createdAt = {};
-      if (startDate) filter.createdAt.$gte = new Date(startDate);
-      if (endDate) filter.createdAt.$lte = new Date(endDate);
+      if (startDate) {
+        const start = new Date(startDate);
+        if (Number.isNaN(start.getTime())) return res.status(400).json({ message: 'Invalid startDate filter.' });
+        filter.createdAt.$gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        if (Number.isNaN(end.getTime())) return res.status(400).json({ message: 'Invalid endDate filter.' });
+        filter.createdAt.$lte = end;
+      }
     }
 
     const [activities, total] = await Promise.all([
@@ -403,7 +411,19 @@ exports.getSecurityEvents = async (req, res) => {
     if (type) filter.type = type;
     if (severity) filter.severity = severity;
     if (userId && mongoose.Types.ObjectId.isValid(userId)) filter.userId = userId;
-    if (startDate || endDate) { filter.createdAt = {}; if (startDate) filter.createdAt.$gte = new Date(startDate); if (endDate) filter.createdAt.$lte = new Date(endDate); }
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        if (Number.isNaN(start.getTime())) return res.status(400).json({ message: 'Invalid startDate filter.' });
+        filter.createdAt.$gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        if (Number.isNaN(end.getTime())) return res.status(400).json({ message: 'Invalid endDate filter.' });
+        filter.createdAt.$lte = end;
+      }
+    }
 
     const [events, total] = await Promise.all([
       SecurityEvent.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('userId', 'name email'),
@@ -426,7 +446,19 @@ exports.getAuditLogs = async (req, res) => {
     const filter = {};
     if (adminId && mongoose.Types.ObjectId.isValid(adminId)) filter.adminId = adminId;
     if (action) filter.action = String(action).trim();
-    if (startDate || endDate) { filter.createdAt = {}; if (startDate) filter.createdAt.$gte = new Date(startDate); if (endDate) filter.createdAt.$lte = new Date(endDate); }
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        if (Number.isNaN(start.getTime())) return res.status(400).json({ message: 'Invalid startDate filter.' });
+        filter.createdAt.$gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        if (Number.isNaN(end.getTime())) return res.status(400).json({ message: 'Invalid endDate filter.' });
+        filter.createdAt.$lte = end;
+      }
+    }
 
     const [logs, total] = await Promise.all([
       AdminAuditLog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('adminId', 'name email role').populate('targetId', 'name email'),
@@ -587,7 +619,12 @@ exports.updateUserProfile = async (req, res) => {
       return res.status(403).json({ message: 'Only a Super Admin can edit another Super Admin.' });
     }
     const { name, bio } = req.body;
-    if (name !== undefined) target.name = String(name).trim().slice(0, 80);
+    if (name !== undefined) {
+      if (typeof name !== 'string' || !name.trim()) {
+        return res.status(400).json({ message: 'Name must be a valid non-empty string.' });
+      }
+      target.name = name.trim().slice(0, 80);
+    }
     if (bio !== undefined) target.bio = String(bio).trim().slice(0, 500);
     await target.save();
     await logAdminAction(req.userId, 'user_profile_edited', target._id, { targetEmail: target.email }, req.ip);

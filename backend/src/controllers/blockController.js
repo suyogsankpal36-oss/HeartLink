@@ -44,6 +44,12 @@ exports.blockUser = async (req, res) => {
           ],
         }),
       ]);
+
+      const io = req.app.get("io");
+      if (io) {
+        io.to(`user_${userId}`).emit("match_removed", { matchId: match._id });
+        io.to(`user_${req.userId}`).emit("match_removed", { matchId: match._id });
+      }
     }
 
     return res.json({

@@ -8,12 +8,15 @@ const SocketContext = createContext(null);
 
 export function SocketProvider({ children }) {
   const { user, refreshProfile } = useAuth();
+  const userId = user?.id || user?._id || null;
+  const refreshProfileRef = useRef(refreshProfile);
+  refreshProfileRef.current = refreshProfile;
   const socketRef = useRef(null);
   const [socketInstance, setSocketInstance] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
@@ -79,7 +82,7 @@ export function SocketProvider({ children }) {
         window.dispatchEvent(new CustomEvent("heartlink:matches_changed", { detail: payload }));
         window.dispatchEvent(new CustomEvent("heartlink:likes_changed", { detail: payload }));
       }
-      refreshProfile().catch(() => {});
+      refreshProfileRef.current?.().catch(() => {});
       if (payload?.message) {
         toast(payload.message, {
           icon: payload.type === "match" ? "🎉" : payload.type === "superlike" ? "⭐" : payload.type === "like" ? "💖" : "💬",
@@ -89,18 +92,18 @@ export function SocketProvider({ children }) {
 
     socket.on("like_received", (payload) => {
       window.dispatchEvent(new CustomEvent("heartlink:likes_changed", { detail: payload }));
-      refreshProfile().catch(() => {});
+      refreshProfileRef.current?.().catch(() => {});
     });
 
     socket.on("new_match_event", (payload) => {
       window.dispatchEvent(new CustomEvent("heartlink:matches_changed", { detail: payload }));
       window.dispatchEvent(new CustomEvent("heartlink:likes_changed", { detail: payload }));
-      refreshProfile().catch(() => {});
+      refreshProfileRef.current?.().catch(() => {});
     });
 
     socket.on("match_removed", (payload) => {
       window.dispatchEvent(new CustomEvent("heartlink:matches_changed", { detail: payload }));
-      refreshProfile().catch(() => {});
+      refreshProfileRef.current?.().catch(() => {});
     });
 
     socket.on("presence_update", (payload) => {
@@ -123,7 +126,7 @@ export function SocketProvider({ children }) {
       setSocketInstance(null);
       setIsConnected(false);
     };
-  }, [user, refreshProfile]);
+  }, [userId]);
 
   return (
     <SocketContext.Provider value={{ socket: socketInstance, isConnected }}>

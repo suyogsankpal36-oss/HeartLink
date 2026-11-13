@@ -1,6 +1,7 @@
 const SupportTicket = require("../models/SupportTicket");
 const User = require("../models/User");
 const mongoose = require("mongoose");
+const { logAdminAction } = require("../services/auditLogger");
 
 const categories = new Set(["account", "profile", "matching", "billing", "safety", "other"]);
 
@@ -82,8 +83,14 @@ exports.updateAdminSupportTicket = async (req, res) => {
 
     const ticket = await SupportTicket.findById(id);
     if (!ticket) return res.status(404).json({ message: "Support ticket not found." });
+    const prevStatus = ticket.status;
     ticket.status = status;
     await ticket.save();
+    await logAdminAction(req.userId, "support_ticket_updated", ticket.user || null, {
+      ticketId: ticket._id,
+      from: prevStatus,
+      to: status,
+    }, req.ip || "");
     return res.json({ success: true, message: "Support ticket updated.", ticket });
   } catch (error) {
     console.error("Update admin support ticket error:", error.message);

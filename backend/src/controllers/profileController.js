@@ -246,31 +246,40 @@ exports.updateProfile = async (req, res) => {
     if (parsedPrompts !== undefined) user.prompts = parsedPrompts;
 
     if (parsedLifestyle && typeof parsedLifestyle === "object") {
+      const pickLife = (field) =>
+        parsedLifestyle[field] !== undefined
+          ? String(parsedLifestyle[field] ?? "").trim().slice(0, 80)
+          : (user.lifestyle?.[field] || "");
       user.lifestyle = {
-        zodiac: parsedLifestyle.zodiac || user.lifestyle?.zodiac || "",
-        drinking: parsedLifestyle.drinking || user.lifestyle?.drinking || "",
-        smoking: parsedLifestyle.smoking || user.lifestyle?.smoking || "",
-        workout: parsedLifestyle.workout || user.lifestyle?.workout || "",
-        pets: parsedLifestyle.pets || user.lifestyle?.pets || "",
-        education: parsedLifestyle.education || user.lifestyle?.education || "",
-        height: parsedLifestyle.height || user.lifestyle?.height || "",
+        zodiac: pickLife("zodiac"),
+        drinking: pickLife("drinking"),
+        smoking: pickLife("smoking"),
+        workout: pickLife("workout"),
+        pets: pickLife("pets"),
+        education: pickLife("education"),
+        height: pickLife("height"),
       };
     }
 
     if (parsedDiscoveryPrefs && typeof parsedDiscoveryPrefs === "object") {
-      const allowedGenders = ["all", "female", "male", "non-binary"];
+      const allowedGenders = ["all", "female", "male", "non-binary", "other"];
       const gp = allowedGenders.includes(parsedDiscoveryPrefs.genderPreference)
         ? parsedDiscoveryPrefs.genderPreference
         : user.discoveryPreferences?.genderPreference || "all";
       const minA = Math.max(18, Math.min(120, Number(parsedDiscoveryPrefs.minAge) || 18));
       const maxA = Math.max(minA, Math.min(120, Number(parsedDiscoveryPrefs.maxAge) || 50));
       const dist = Math.max(1, Math.min(500, Number(parsedDiscoveryPrefs.distance) || 50));
+      const hideProfile =
+        parsedDiscoveryPrefs.hideProfile !== undefined
+          ? Boolean(parsedDiscoveryPrefs.hideProfile)
+          : Boolean(user.discoveryPreferences?.hideProfile);
 
       user.discoveryPreferences = {
         genderPreference: gp,
         minAge: minA,
         maxAge: maxA,
         distance: dist,
+        hideProfile,
       };
     }
 

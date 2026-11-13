@@ -22,9 +22,12 @@ exports.getMatches = async (req, res) => {
         $or: [{ blocker: req.userId }, { blockedUser: req.userId }],
       }),
     ]);
+    const currentUserObjectId = mongoose.Types.ObjectId.isValid(req.userId)
+      ? new mongoose.Types.ObjectId(req.userId)
+      : req.userId;
     const unreadCounts = matches.length
       ? await Message.aggregate([
-          { $match: { match: { $in: matches.map((match) => match._id) }, receiver: req.userId, read: false } },
+          { $match: { match: { $in: matches.map((match) => match._id) }, receiver: currentUserObjectId, read: false } },
           { $group: { _id: "$match", count: { $sum: 1 } } },
         ])
       : [];

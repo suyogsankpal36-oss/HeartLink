@@ -207,10 +207,11 @@ exports.toggleReaction = async (req, res) => {
       return res.status(403).json({ message: restrictionMessage("messaging", messagingRestriction) });
     }
 
-    // Verify user is in this match
+    // Verify user is in this active match
     const match = await Match.findOne({
       _id: message.match,
       users: req.userId,
+      status: "active",
     });
 
     if (!match) {

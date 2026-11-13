@@ -23,9 +23,12 @@ exports.getConversations = async (req, res) => {
           : b.blocker.toString()
       )
     );
+    const currentUserObjectId = mongoose.Types.ObjectId.isValid(req.userId)
+      ? new mongoose.Types.ObjectId(req.userId)
+      : req.userId;
     const unreadCounts = conversations.length
       ? await Message.aggregate([
-          { $match: { match: { $in: conversations.map((conversation) => conversation._id) }, receiver: req.userId, read: false } },
+          { $match: { match: { $in: conversations.map((conversation) => conversation._id) }, receiver: currentUserObjectId, read: false } },
           { $group: { _id: "$match", count: { $sum: 1 } } },
         ])
       : [];
