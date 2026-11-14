@@ -13,6 +13,7 @@ import {
   MapPin,
   MessageSquare,
   RotateCcw,
+  Search,
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
@@ -425,17 +426,18 @@ function SwipeableDatingCard({
         </motion.div>
       </div>
 
-      {/* Floating Circular Action Controls */}
-      <div className="flex items-center justify-center gap-3.5 sm:gap-4 py-5 w-full">
-        {/* Rewind */}
+      {/* Floating Circular Action Controls matching 06-discover.png */}
+      <div className="flex items-center justify-center gap-5 sm:gap-6 py-6 w-full">
+        {/* Rewind (Compact) */}
         <button
           type="button"
           onClick={onRewind}
           disabled={acting}
+          title="Rewind last pass (Z)"
           aria-label="Rewind last pass"
-          className="flex h-12 w-12 items-center justify-center rounded-full border border-amber-400/30 bg-base-100 text-amber-500 shadow-md hover:scale-110 active:scale-90 hover:bg-amber-500/10 transition-transform cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 shadow-sm hover:scale-105 active:scale-95 transition-transform cursor-pointer disabled:opacity-40"
         >
-          <RotateCcw className="h-5 w-5" strokeWidth={2} />
+          <RotateCcw className="h-4 w-4" strokeWidth={2} />
         </button>
 
         {/* Pass (✕) */}
@@ -444,20 +446,9 @@ function SwipeableDatingCard({
           onClick={triggerPass}
           disabled={acting}
           aria-label="Pass profile (Arrow Left)"
-          className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-rose-500/25 bg-base-100 text-rose-500 shadow-xl hover:scale-110 active:scale-90 hover:bg-rose-500/10 transition-transform cursor-pointer disabled:opacity-40"
+          className="flex h-14 w-14 items-center justify-center rounded-full border border-rose-100 dark:border-gray-700 bg-white dark:bg-gray-800 text-[#E61E50] shadow-xl hover:scale-110 active:scale-95 transition-transform cursor-pointer disabled:opacity-40"
         >
-          <X className="h-8 w-8 text-rose-500" strokeWidth={2.75} />
-        </button>
-
-        {/* Superlike / Spark (★) */}
-        <button
-          type="button"
-          onClick={onSpark}
-          disabled={acting}
-          aria-label="Send Spark note (Arrow Up)"
-          className="flex h-12 w-12 items-center justify-center rounded-full border border-sky-400/30 bg-base-100 text-sky-500 shadow-md hover:scale-110 active:scale-90 hover:bg-sky-500/10 transition-transform cursor-pointer disabled:opacity-40"
-        >
-          <Sparkles className="h-5 w-5" strokeWidth={2} />
+          <X className="h-7 w-7 text-[#E61E50]" strokeWidth={2.5} />
         </button>
 
         {/* Like (♥) */}
@@ -466,42 +457,28 @@ function SwipeableDatingCard({
           onClick={triggerLike}
           disabled={acting}
           aria-label="Like profile (Arrow Right or double-tap)"
-          className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-tr from-rose-500 via-pink-500 to-rose-600 text-white shadow-2xl hover:scale-110 active:scale-90 shadow-rose-500/35 transition-transform cursor-pointer disabled:opacity-40"
+          className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-tr from-[#E61E50] via-[#F43F5E] to-[#FB7185] text-white shadow-xl shadow-rose-500/35 hover:scale-110 active:scale-95 transition-transform cursor-pointer disabled:opacity-40"
         >
           <Heart className="h-8 w-8 fill-white text-white" strokeWidth={2} />
         </button>
 
-        {/* Info Toggle */}
+        {/* Superlike / Spark */}
         <button
           type="button"
-          onClick={() => setShowDetails(!showDetails)}
-          aria-label="Toggle profile details (Space)"
-          className={`flex h-12 w-12 items-center justify-center rounded-full border border-base-300 bg-base-100 shadow-md hover:scale-110 active:scale-90 transition-transform cursor-pointer ${
-            showDetails ? "text-primary border-primary/40 bg-primary/10" : "text-base-content/70 hover:text-base-content"
-          }`}
+          onClick={onSpark}
+          disabled={acting}
+          title="Send Spark note"
+          aria-label="Send Spark note (Arrow Up)"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-[#E61E50] shadow-sm hover:scale-105 active:scale-95 transition-transform cursor-pointer disabled:opacity-40"
         >
-          <Info className="h-5 w-5" strokeWidth={2} />
+          <Sparkles className="h-4 w-4" strokeWidth={2} />
         </button>
       </div>
 
-      {/* Desktop Keyboard Hints Bar */}
-      <div className="hidden sm:flex items-center justify-center gap-3.5 text-[11px] hl-muted-text pb-4 select-none">
-        <span className="inline-flex items-center gap-1">
-          <kbd className="px-1.5 py-0.5 rounded-md border border-base-300 bg-base-200 font-mono text-[10px]">←</kbd> Pass
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <kbd className="px-1.5 py-0.5 rounded-md border border-base-300 bg-base-200 font-mono text-[10px]">↑</kbd> Spark
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <kbd className="px-1.5 py-0.5 rounded-md border border-base-300 bg-base-200 font-mono text-[10px]">→</kbd> Like
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <kbd className="px-1.5 py-0.5 rounded-md border border-base-300 bg-base-200 font-mono text-[10px]">Space</kbd> Details
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <kbd className="px-1.5 py-0.5 rounded-md border border-base-300 bg-base-200 font-mono text-[10px]">Z</kbd> Rewind
-        </span>
-      </div>
+      {/* Tip text matching 06-discover.png */}
+      <p className="text-center text-xs text-gray-400 dark:text-gray-500 pb-2">
+        Tip: use the &larr; &rarr; arrow keys, or tap the photo edges to see more pictures.
+      </p>
 
       {/* Expandable Hinge-style Profile Details */}
       {showDetails && (
@@ -1609,7 +1586,9 @@ export function LikesPage() {
 
 export function MatchesPage() {
   const { refreshProfile } = useAuth();
+  const navigate = useNavigate();
   const [matches, setMatches] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [unmatchTarget, setUnmatchTarget] = useState(null);
@@ -1655,12 +1634,45 @@ export function MatchesPage() {
     }
   };
 
+  const filteredMatches = matches.filter((m) => {
+    if (!searchQuery.trim()) return true;
+    const name = m.matchedUser?.name || "";
+    const bio = m.matchedUser?.bio || "";
+    const city = m.matchedUser?.city || "";
+    const q = searchQuery.toLowerCase();
+    return name.toLowerCase().includes(q) || bio.toLowerCase().includes(q) || city.toLowerCase().includes(q);
+  });
+
+  // Split into new matches (e.g. no messages or matched recently) vs all matches
+  const newMatches = filteredMatches.filter((m) => !m.lastMessage?.text);
+  const conversationalMatches = filteredMatches.length > 0 ? filteredMatches : [];
+
   return (
-    <AppShell
-      title="Matches"
-      subtitle="Your mutual connections. Start a chat, send a voice note, or plan your first date."
-    >
-      <PageTransition className="space-y-6">
+    <AppShell>
+      <PageTransition className="space-y-8 max-w-5xl mx-auto w-full">
+        {/* Header row matching 09-matches.png */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+          <div>
+            <h1 className="font-serif text-3xl font-bold text-gray-900 dark:text-white">Your matches</h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              {matches.length} {matches.length === 1 ? "person likes" : "people like"} you back
+            </p>
+          </div>
+
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+              <Search className="h-3.5 w-3.5" />
+            </span>
+            <input
+              type="text"
+              placeholder="Search matches"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 pr-4 py-2 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white placeholder-gray-400 shadow-xs focus:outline-none focus:ring-2 focus:ring-[#E61E50] w-full sm:w-64"
+            />
+          </div>
+        </div>
+
         {error && <ErrorNotice message={error} onRetry={loadMatches} />}
 
         {loading ? (
@@ -1679,58 +1691,96 @@ export function MatchesPage() {
             />
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {matches.map((match) => {
-              const user = match.matchedUser;
-              if (!user) return null;
-              return (
-                <Card key={match.matchId} variant="interactive" className="flex flex-col justify-between gap-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <Avatar
-                        src={user.profilePhoto || user.photos?.[0]}
-                        name={user.name}
-                        size="lg"
-                        online={user.online}
-                        verified={user.isVerified}
-                      />
-                      <div className="min-w-0">
-                        <Link
-                          to={`/profile/${user.id}`}
-                          className="text-sm font-semibold text-base-content hover:underline truncate block"
-                        >
-                          {user.name}
-                          {user.age ? `, ${user.age}` : ""}
-                        </Link>
-                        <p className="text-xs hl-muted-text truncate">
-                          {user.online ? "Online now" : user.city || "Matched"}
+          <div className="space-y-8">
+            {/* New Matches Story Row matching 09-matches.png */}
+            {newMatches.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-gray-900 dark:text-white">New matches</h2>
+                  <span className="rounded-full bg-[#E61E50] text-white text-[10px] font-bold px-2 py-0.5">
+                    {newMatches.length}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4 overflow-x-auto pb-2 scrollbar-none">
+                  {newMatches.map((m) => {
+                    const u = m.matchedUser;
+                    if (!u) return null;
+                    return (
+                      <button
+                        key={m.matchId}
+                        type="button"
+                        onClick={() => navigate(`/messages/${m.matchId}`)}
+                        className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer"
+                      >
+                        <div className="relative p-0.5 rounded-full ring-2 ring-[#E61E50] ring-offset-2 ring-offset-white dark:ring-offset-gray-900 transition-transform group-hover:scale-105">
+                          <Avatar
+                            src={u.profilePhoto || u.photos?.[0]}
+                            name={u.name}
+                            size="lg"
+                            className="rounded-full object-cover"
+                          />
+                        </div>
+                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300 max-w-[76px] truncate text-center">
+                          {u.name?.split(" ")[0]}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* All Matches Portrait Cards Grid matching 09-matches.png */}
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">All matches</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6">
+                {conversationalMatches.map((match) => {
+                  const user = match.matchedUser;
+                  if (!user) return null;
+                  const photo = resolvePhotoUrl(user.profilePhoto || user.photos?.[0]);
+
+                  return (
+                    <div
+                      key={match.matchId}
+                      onClick={() => navigate(`/messages/${match.matchId}`)}
+                      className="group relative aspect-[3/4] rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer bg-gray-100 dark:bg-gray-800"
+                    >
+                      {/* Full-bleed photo */}
+                      {photo ? (
+                        <img
+                          src={photo}
+                          alt={user.name}
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-rose-100 to-rose-200 dark:from-rose-950 dark:to-gray-900">
+                          <Avatar name={user.name} size="2xl" />
+                        </div>
+                      )}
+
+                      {/* Top Unread Badge (09-matches.png style) */}
+                      {match.unreadCount > 0 && (
+                        <div className="absolute top-3 right-3 z-10 flex items-center gap-1 rounded-full bg-[#E61E50] text-white text-[11px] font-bold px-2.5 py-0.5 shadow-md">
+                          <MessageSquare className="h-3 w-3 fill-white" />
+                          <span>{match.unreadCount}</span>
+                        </div>
+                      )}
+
+                      {/* Bottom Gradient Overlay */}
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-4 text-white z-10 flex flex-col justify-end">
+                        <p className="font-bold text-sm sm:text-base leading-tight drop-shadow-sm truncate">
+                          {user.name}{user.age ? `, ${user.age}` : ""}
+                        </p>
+                        <p className="text-[11px] text-gray-200/90 truncate mt-0.5">
+                          {match.lastMessage?.text || "Matched just now"}
                         </p>
                       </div>
                     </div>
-                    {match.unreadCount > 0 && <Badge tone="primary">{match.unreadCount} unread</Badge>}
-                  </div>
-
-                  <p className="text-xs hl-muted-text rounded-lg border hl-subtle-divider bg-base-200/50 p-3 line-clamp-2">
-                    {match.lastMessage?.text || "No messages yet — send an opening note."}
-                  </p>
-
-                  <div className="flex items-center gap-2">
-                    <Link to={`/messages/${match.matchId}`} className="flex-1">
-                      <Button size="sm" fullWidth leftIcon={<MessageSquare className="h-3.5 w-3.5" />}>
-                        Open Chat
-                      </Button>
-                    </Link>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setUnmatchTarget(match)}
-                    >
-                      Unmatch
-                    </Button>
-                  </div>
-                </Card>
-              );
-            })}
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </PageTransition>

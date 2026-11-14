@@ -416,17 +416,17 @@ export function MessagesPage() {
 
   return (
     <AppShell fullHeight>
-      <div className="flex-1 flex min-h-0 h-[calc(100dvh-4rem)] overflow-hidden bg-base-200">
-        {/* Conversation List Pane */}
+      <div className="flex-1 flex gap-4 md:gap-6 min-h-0 h-[calc(100dvh-5.5rem)] overflow-hidden max-w-7xl mx-auto w-full px-2 sm:px-4 py-2">
+        {/* Conversation List Pane matching 10-chat.png */}
         <aside
           aria-label="Conversations"
-          className={`w-full md:w-80 lg:w-96 shrink-0 border-r hl-subtle-divider bg-base-100 flex flex-col ${
+          className={`w-full md:w-80 lg:w-96 shrink-0 rounded-3xl border border-rose-100/70 dark:border-gray-700/80 bg-white dark:bg-gray-800 shadow-xs flex flex-col overflow-hidden ${
             conversationId ? "hidden md:flex" : "flex"
           }`}
         >
-          <div className="p-4 border-b hl-subtle-divider space-y-3">
+          <div className="p-4 sm:p-5 border-b border-rose-100/60 dark:border-gray-700/60 space-y-3">
             <div className="flex items-center justify-between">
-              <h1 className="text-base font-semibold tracking-tight text-base-content">Messages</h1>
+              <h1 className="font-serif text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Messages</h1>
               <Badge tone={isConnected ? "success" : "warning"} dot>
                 {isConnected ? "Live" : "Reconnecting"}
               </Badge>
@@ -509,7 +509,7 @@ export function MessagesPage() {
         {/* Thread Pane */}
         <section
           aria-label="Active conversation"
-          className={`flex-1 flex flex-col min-w-0 bg-base-200/60 ${
+          className={`flex-1 flex flex-col min-w-0 rounded-3xl border border-rose-100/70 dark:border-gray-700/80 bg-white dark:bg-gray-800 shadow-xs overflow-hidden ${
             !conversationId ? "hidden md:flex" : "flex"
           }`}
         >
@@ -523,8 +523,8 @@ export function MessagesPage() {
             </div>
           ) : (
             <>
-              {/* Thread Header */}
-              <div className="h-16 border-b hl-subtle-divider bg-base-100 px-4 flex items-center justify-between gap-3 shrink-0">
+              {/* Thread Header matching 10-chat.png */}
+              <div className="h-16 border-b border-rose-100/60 dark:border-gray-700/60 bg-white dark:bg-gray-800 px-4 sm:px-6 flex items-center justify-between gap-3 shrink-0">
                 <div className="flex items-center gap-3 min-w-0">
                   <IconButton
                     label="Back to conversations"
@@ -626,24 +626,24 @@ export function MessagesPage() {
                       <div key={msgId} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
                         <div className={`group flex items-end gap-1.5 max-w-[82%] sm:max-w-[68%] ${mine ? "flex-row-reverse" : "flex-row"}`}>
                           <div
-                            className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed break-words shadow-xs ${
+                            className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed break-words ${
                               mine
-                                ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-br-xs shadow-xs"
-                                : "bg-base-100 border border-base-300 text-base-content rounded-bl-xs"
+                                ? "bg-[#E61E50] text-white rounded-tr-none shadow-sm"
+                                : "bg-gray-100 dark:bg-gray-700/80 text-gray-900 dark:text-white rounded-tl-none shadow-xs"
                             }`}
                           >
                             <p className="whitespace-pre-wrap">{msg.text}</p>
                             <div
-                              className={`mt-1 flex items-center justify-end gap-1 text-[10px] hl-tabular ${
-                                mine ? "text-rose-100/85" : "hl-muted-text"
+                              className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${
+                                mine ? "text-rose-100" : "text-gray-400"
                               }`}
                             >
                               <span>{formatMessageTime(msg.createdAt)}</span>
                               {mine &&
                                 (msg.read ? (
-                                  <CheckCheck className="h-3 w-3 text-emerald-300" aria-label="Read" />
+                                  <CheckCheck className="h-3 w-3 text-white" aria-label="Read" />
                                 ) : (
-                                  <Check className="h-3 w-3 opacity-80" aria-label="Sent" />
+                                  <Check className="h-3 w-3 text-rose-200" aria-label="Sent" />
                                 ))}
                             </div>
                           </div>
@@ -715,43 +715,68 @@ export function MessagesPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Composer */}
-              <div className="border-t hl-subtle-divider bg-base-100 p-3 sm:p-4 shrink-0">
+              {/* Composer matching 10-chat.png */}
+              <div className="border-t border-rose-100/60 dark:border-gray-700/60 bg-white dark:bg-gray-800 p-3 sm:p-4 shrink-0">
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
                     sendMessage();
                   }}
-                  className="flex items-end gap-2.5 max-w-4xl mx-auto"
+                  className="flex items-center gap-2 max-w-4xl mx-auto"
                 >
-                  <label htmlFor="message-composer" className="sr-only">
-                    Write a message
-                  </label>
-                  <textarea
+                  {/* Emoji Button */}
+                  <Dropdown
+                    align="left"
+                    widthClass="w-auto"
+                    trigger={({ toggle }) => (
+                      <button
+                        type="button"
+                        onClick={toggle}
+                        aria-label="Add emoji"
+                        className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+                      >
+                        <Smile className="h-5 w-5" />
+                      </button>
+                    )}
+                  >
+                    {({ close }) => (
+                      <div className="flex flex-wrap gap-2 p-2 max-w-xs">
+                        {QUICK_REACTIONS.map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => {
+                              setDraft((prev) => prev + emoji);
+                              close();
+                            }}
+                            className="text-lg hover:scale-125 transition-transform p-1 cursor-pointer"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </Dropdown>
+
+                  <input
                     id="message-composer"
-                    rows={1}
+                    type="text"
                     maxLength={2000}
                     value={draft}
                     onChange={(e) => handleTypingChange(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                        e.preventDefault();
-                        sendMessage();
-                      }
-                    }}
-                    placeholder={`Message ${participant?.name || "match"}... (Enter to send, Shift+Enter for newline)`}
-                    className="textarea textarea-bordered flex-1 min-h-10 max-h-32 resize-y bg-base-200/70 border-base-300 rounded-xl px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
+                    placeholder="Type a message..."
+                    className="flex-1 px-4 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-850 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E61E50]"
                   />
-                  <Button
+
+                  {/* Send Button matching 10-chat.png */}
+                  <button
                     type="submit"
-                    size="md"
-                    loading={sending}
-                    disabled={!draft.trim()}
+                    disabled={!draft.trim() || sending}
                     aria-label="Send message"
-                    rightIcon={<Send className="h-4 w-4" />}
+                    className="h-10 w-10 rounded-full bg-[#E61E50] hover:bg-[#D01845] active:bg-[#B9143C] text-white flex items-center justify-center shadow-md shadow-rose-500/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
                   >
-                    <span className="hidden sm:inline">Send</span>
-                  </Button>
+                    <Send className="h-4 w-4" />
+                  </button>
                 </form>
               </div>
             </>

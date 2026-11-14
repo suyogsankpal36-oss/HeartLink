@@ -6,16 +6,17 @@ import { resolvePhotoUrl } from "../../services/api";
 export function Logo({ to = "/", badge = "", compact = false, className = "", light = false, asDiv = false }) {
   const content = (
     <>
-      <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#F45B83] via-[#C2295D] to-[#681D3B] text-white shadow-md shrink-0 ring-1 ring-white/20">
-        <Heart className="h-4 w-4 fill-white text-white drop-shadow-sm" strokeWidth={2} />
+      <span className="relative flex h-8 w-8 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#E61E50] via-[#F43F5E] to-[#FB7185] text-white shadow-md shadow-rose-500/25 shrink-0">
+        <Heart className="h-4 w-4 fill-white text-white" strokeWidth={0} />
       </span>
       {!compact && (
-        <span className="inline-flex items-center gap-2">
-          <span className={`text-[15px] font-bold tracking-tight ${light ? "text-white" : "text-base-content"}`}>
-            HEART<span className="text-[#F45B83]">LINK</span>
+        <span className="inline-flex items-baseline gap-0.5">
+          <span className={`text-[19px] font-bold tracking-tight font-serif ${light ? "text-white" : "text-base-content"}`}>
+            HeartLink
           </span>
+          <span className="text-[#E61E50] text-xl font-bold font-serif leading-none">.</span>
           {badge && (
-            <span className="rounded-md border border-[#F45B83]/30 bg-[#F45B83]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#F45B83]">
+            <span className="ml-2 rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[#E61E50]">
               {badge}
             </span>
           )}

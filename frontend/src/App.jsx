@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation, useParams } from "react-router-do
 import { useAuth } from "./context/AuthContext.jsx";
 import { RequireMember } from "./components/Layout.jsx";
 import { PageSpinner } from "./components/ui.jsx";
+import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
 import {
   AuthRedirect,
   ProtectedRoute,
@@ -111,8 +112,9 @@ function App() {
   return (
     <>
       <ScrollManager />
-      <Suspense fallback={<FullPageLoader label="Opening HeartLink" />}>
-        <Routes>
+      <ErrorBoundary>
+        <Suspense fallback={<FullPageLoader label="Opening HeartLink" />}>
+          <Routes>
           {/* Public */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/signup" element={<AuthRedirect mode="signup" component={AuthPage} />} />
@@ -268,6 +270,7 @@ function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
+      </ErrorBoundary>
     </>
   );
 }

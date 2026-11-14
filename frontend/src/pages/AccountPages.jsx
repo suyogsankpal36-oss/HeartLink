@@ -7,19 +7,26 @@ import {
   Check,
   CheckCheck,
   Crown,
+  EyeOff,
+  Heart,
   ImagePlus,
   KeyRound,
   Lock,
+  LogOut,
   MapPin,
+  MessageSquare,
   Plus,
   Shield,
+  ShieldCheck,
   SlidersHorizontal,
   Star,
+  Sun,
   Trash2,
   UserCheck,
 } from "lucide-react";
 import interestsCatalog from "../../../shared/interests.json";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import { api, apiErrorMessage, resolvePhotoUrl } from "../services/api";
 import { AppShell } from "../components/Layout";
 import {
@@ -416,61 +423,92 @@ export function EditProfilePage() {
     }));
   };
 
+  const primaryPhoto = form.profilePhoto || form.photos[0];
+
   return (
-    <AppShell
-      title="Edit Profile"
-      subtitle="Manage your gallery photos, bio, shared interests, prompts, and lifestyle details."
-    >
-      <PageTransition>
+    <AppShell>
+      <PageTransition className="space-y-8 max-w-6xl mx-auto w-full">
         {error && <ErrorNotice message={error} onRetry={loadMe} className="mb-6" />}
         {loading ? (
           <PageSpinner label="Loading profile editor..." />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Gallery Column */}
-            <div className="lg:col-span-5 space-y-5">
-              <Card
-                header={
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-sm font-semibold text-base-content">
-                      Photo Gallery ({form.photos.length}/6)
-                    </span>
-                    <Badge tone="neutral">GridFS Secured</Badge>
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
+            {/* Left Column: Discover Preview Card matching 13-profile.png */}
+            <div className="w-full lg:w-[320px] shrink-0 space-y-3">
+              <div className="rounded-[32px] overflow-hidden shadow-xl border border-rose-100 dark:border-gray-800 bg-white dark:bg-gray-800 aspect-[4/5] relative">
+                {primaryPhoto ? (
+                  <img
+                    src={resolvePhotoUrl(primaryPhoto)}
+                    alt={form.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-rose-50 dark:bg-gray-900">
+                    <Avatar name={form.name || "You"} size="2xl" />
                   </div>
-                }
-              >
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3">
+                )}
+                {/* Bottom gradient overlay */}
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-5 text-white z-10">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-serif font-bold text-xl sm:text-2xl drop-shadow-sm truncate">
+                      {form.name || "Aarav Sharma"}, {user?.age || "28"}
+                    </h3>
+                    <ShieldCheck className="h-4 w-4 text-sky-400 shrink-0" />
+                  </div>
+                  <p className="text-xs text-gray-200 mt-1 flex items-center gap-1.5 truncate">
+                    <span>💼</span>
+                    <span>{form.lifestyle?.education || "Product Designer"}</span>
+                  </p>
+                  <p className="text-xs text-gray-200 mt-0.5 flex items-center gap-1.5 truncate">
+                    <span>📍</span>
+                    <span>{form.city || "Nagpur"}</span>
+                  </p>
+                </div>
+              </div>
+              <p className="text-center text-xs text-gray-400 dark:text-gray-500">
+                This is how others see you in Discover.
+              </p>
+            </div>
+
+            {/* Right Column: Photos & About Me Forms matching 13-profile.png */}
+            <form onSubmit={handleSaveProfile} className="flex-1 w-full space-y-6">
+              {/* Card 1: My photos */}
+              <div className="bg-white dark:bg-gray-800 rounded-3xl border border-rose-100/70 dark:border-gray-700/80 p-6 sm:p-8 shadow-xs space-y-5">
+                <h2 className="font-serif text-2xl font-bold text-gray-900 dark:text-white">My photos</h2>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {form.photos.map((url, idx) => {
                     const isPrimary = idx === 0 || url === form.profilePhoto;
                     return (
-                      <div key={url} className="group relative aspect-square rounded-xl overflow-hidden border border-base-300 bg-base-200">
+                      <div
+                        key={url}
+                        className="group relative aspect-[4/5] rounded-3xl overflow-hidden border border-rose-100 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 shadow-xs"
+                      >
                         <img
                           src={resolvePhotoUrl(url)}
-                          alt={`Gallery item ${idx + 1}`}
+                          alt={`Gallery photo ${idx + 1}`}
                           className="h-full w-full object-cover"
                         />
                         {isPrimary && (
-                          <span className="absolute top-2 left-2 rounded-md bg-indigo-600/90 px-2 py-0.5 text-[10px] font-semibold text-white">
-                            Primary
+                          <span className="absolute top-3 left-3 rounded-full bg-[#E61E50] px-2.5 py-0.5 text-[10px] font-bold text-white shadow-md">
+                            ★ Main
                           </span>
                         )}
-                        <div className="absolute inset-x-0 bottom-0 bg-slate-950/75 p-1.5 flex items-center justify-between gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                          {!isPrimary ? (
+                        <div className="absolute inset-x-0 bottom-0 bg-black/75 p-2 flex items-center justify-between gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {!isPrimary && (
                             <button
                               type="button"
                               onClick={() => setAsPrimaryPhoto(url)}
-                              className="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium text-white bg-white/15 hover:bg-white/25 cursor-pointer"
+                              className="text-[10px] font-semibold text-white bg-white/20 hover:bg-white/30 rounded-full px-2 py-1 cursor-pointer"
                             >
-                              <Star className="h-3 w-3" /> Cover
+                              Set Main
                             </button>
-                          ) : (
-                            <span className="text-[10px] text-slate-300 px-1">Cover photo</span>
                           )}
                           <button
                             type="button"
                             aria-label="Remove photo"
                             onClick={() => deletePhoto(url)}
-                            className="rounded p-1 text-rose-300 hover:bg-rose-500/20 cursor-pointer"
+                            className="p-1 rounded-full text-rose-300 hover:text-white hover:bg-rose-600/40 cursor-pointer ml-auto"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -482,13 +520,12 @@ export function EditProfilePage() {
                   {form.photos.length < 6 && (
                     <label
                       htmlFor="profile-photo-upload"
-                      className="aspect-square rounded-xl border-2 border-dashed border-base-300 hover:border-primary bg-base-200/50 flex flex-col items-center justify-center gap-2 text-center p-3 cursor-pointer transition-colors"
+                      className="aspect-[4/5] rounded-3xl border-2 border-dashed border-rose-300 dark:border-rose-800/60 bg-rose-50/30 dark:bg-rose-950/20 hover:bg-rose-50/70 flex flex-col items-center justify-center gap-2 text-center p-4 cursor-pointer transition-colors"
                     >
-                      <ImagePlus className="h-5 w-5 hl-accent-text" />
-                      <span className="text-xs font-medium text-base-content">
+                      <Plus className="h-6 w-6 text-[#E61E50]" />
+                      <span className="text-xs font-semibold text-[#E61E50]">
                         {uploadingPhoto ? "Uploading..." : "Add photo"}
                       </span>
-                      <span className="text-[10px] hl-muted-text">JPG, PNG, WebP · max 5 MB</span>
                       <input
                         id="profile-photo-upload"
                         type="file"
@@ -500,201 +537,202 @@ export function EditProfilePage() {
                     </label>
                   )}
                 </div>
-              </Card>
-            </div>
 
-            {/* Profile Form Column */}
-            <form onSubmit={handleSaveProfile} className="lg:col-span-7 space-y-6">
-              <Card
-                header={
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="h-4 w-4 hl-accent-text" />
-                    <span className="text-sm font-semibold text-base-content">Identity &amp; Story</span>
-                  </div>
-                }
-              >
+                <p className="text-[11px] text-gray-400 dark:text-gray-500 pt-1 flex items-center gap-1.5">
+                  <span>📷</span>
+                  <span>JPG, PNG or WebP, up to 5 MB each. Add at least one clear photo of yourself.</span>
+                </p>
+              </div>
+
+              {/* Card 2: About me */}
+              <div className="bg-white dark:bg-gray-800 rounded-3xl border border-rose-100/70 dark:border-gray-700/80 p-6 sm:p-8 shadow-xs space-y-6">
+                <h2 className="font-serif text-2xl font-bold text-gray-900 dark:text-white">About me</h2>
+
                 <div className="space-y-4">
+                  {/* Name & Date of birth */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Field
-                      id="edit-name"
-                      label="Display name"
-                      required
-                      maxLength={60}
-                      value={form.name}
-                      onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                    />
-                    <Field
-                      id="edit-city"
-                      label="City"
-                      maxLength={80}
-                      value={form.city}
-                      onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
-                      placeholder="e.g., Bengaluru, Mumbai, Austin"
-                    />
-                  </div>
-                  <Select
-                    id="edit-looking-for"
-                    label="Looking for"
-                    value={form.lookingFor}
-                    onChange={(e) => setForm((p) => ({ ...p, lookingFor: e.target.value }))}
-                    options={[
-                      { value: "relationship", label: "Long-term relationship" },
-                      { value: "friendship", label: "Meaningful friendship" },
-                      { value: "casual", label: "Casual connection" },
-                    ]}
-                  />
-                  <TextArea
-                    id="edit-bio"
-                    label="Bio"
-                    rows={4}
-                    maxLength={500}
-                    value={form.bio}
-                    onChange={(e) => setForm((p) => ({ ...p, bio: e.target.value }))}
-                    placeholder="Share what matters to you, your work, or weekend pace..."
-                  />
-                </div>
-              </Card>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">First name</label>
+                      <input
+                        type="text"
+                        required
+                        value={form.name}
+                        onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E61E50]"
+                      />
+                    </div>
 
-              <Card
-                header={
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-sm font-semibold text-base-content">
-                      Interests ({form.interests.length}/12)
-                    </span>
-                    <span className="text-xs hl-muted-text">Powers compatibility scoring</span>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Date of birth</label>
+                      <input
+                        type="text"
+                        disabled
+                        value={user?.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString() : "01/03/1998"}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-850 text-sm text-gray-500 cursor-not-allowed"
+                      />
+                    </div>
                   </div>
-                }
-              >
-                <div className="flex flex-wrap gap-2">
-                  {interestsCatalog.map((tag) => {
-                    const active = form.interests.includes(tag);
-                    return (
-                      <button
-                        key={tag}
-                        type="button"
-                        aria-pressed={active}
-                        onClick={() => toggleInterest(tag)}
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
-                          active
-                            ? "border-primary bg-primary text-primary-content"
-                            : "border-base-300 bg-base-200/60 text-base-content hover:border-primary/50"
-                        }`}
-                      >
-                        {active && <Check className="h-3 w-3" />}
-                        {tag}
-                      </button>
-                    );
-                  })}
-                </div>
-              </Card>
 
-              <Card
-                header={
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-sm font-semibold text-base-content">
-                      Profile Prompts ({form.prompts.length}/3)
-                    </span>
-                    {form.prompts.length < 3 && (
-                      <Button type="button" size="xs" variant="outline" onClick={addPrompt} leftIcon={<Plus className="h-3.5 w-3.5" />}>
-                        Add Prompt
-                      </Button>
-                    )}
+                  {/* Job title & City */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Job title</label>
+                      <input
+                        type="text"
+                        placeholder="Product Designer"
+                        value={form.lifestyle?.education || ""}
+                        onChange={(e) =>
+                          setForm((p) => ({
+                            ...p,
+                            lifestyle: { ...p.lifestyle, education: e.target.value },
+                          }))
+                        }
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E61E50]"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">City</label>
+                      <input
+                        type="text"
+                        placeholder="Nagpur"
+                        value={form.city}
+                        onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E61E50]"
+                      />
+                    </div>
                   </div>
-                }
-              >
-                {form.prompts.length === 0 ? (
-                  <p className="text-xs hl-muted-text">
-                    Add up to 3 conversation starter prompts to help matches break the ice.
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {form.prompts.map((prompt, idx) => (
-                      <div key={idx} className="rounded-lg border hl-subtle-divider bg-base-200/40 p-3.5 space-y-2.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <select
-                            aria-label={`Prompt ${idx + 1} question`}
-                            value={prompt.question}
-                            onChange={(e) =>
-                              setForm((prev) => {
-                                const next = [...prev.prompts];
-                                next[idx] = { ...next[idx], question: e.target.value };
-                                return { ...prev, prompts: next };
-                              })
-                            }
-                            className="select select-bordered select-sm flex-1 bg-base-100 text-xs rounded-lg"
-                          >
-                            {PROMPT_SUGGESTIONS.map((q) => (
-                              <option key={q} value={q}>
-                                {q}
-                              </option>
-                            ))}
-                          </select>
-                          <Button
+
+                  {/* Bio */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Bio</label>
+                    <textarea
+                      rows={4}
+                      maxLength={500}
+                      value={form.bio}
+                      onChange={(e) => setForm((p) => ({ ...p, bio: e.target.value }))}
+                      placeholder="Coffee snob, weekend trekker and part-time chef. Looking for someone to explore new cafes with."
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E61E50] resize-none"
+                    />
+                    <div className="flex justify-end">
+                      <span className="text-[10px] text-gray-400">{form.bio.length}/500</span>
+                    </div>
+                  </div>
+
+                  {/* I am a segmented pills */}
+                  <div className="space-y-1.5 pt-1">
+                    <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">I am a</label>
+                    <div className="flex items-center gap-2">
+                      {[
+                        { value: "male", label: "Man" },
+                        { value: "female", label: "Woman" },
+                        { value: "other", label: "Other" },
+                      ].map((item) => (
+                        <button
+                          key={item.value}
+                          type="button"
+                          onClick={() => setForm((p) => ({ ...p, gender: item.value }))}
+                          className={`px-6 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                            (user?.gender === item.value || form.gender === item.value)
+                              ? "bg-[#E61E50] text-white shadow-sm"
+                              : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200"
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Show me segmented pills */}
+                  <div className="space-y-1.5 pt-1">
+                    <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Show me</label>
+                    <div className="flex items-center gap-2">
+                      {[
+                        { value: "men", label: "Men" },
+                        { value: "women", label: "Women" },
+                        { value: "everyone", label: "Everyone else" },
+                      ].map((item) => (
+                        <button
+                          key={item.value}
+                          type="button"
+                          onClick={() => setForm((p) => ({ ...p, showMe: item.value }))}
+                          className={`px-5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                            (form.showMe === item.value || (!form.showMe && item.value === "women"))
+                              ? "bg-[#E61E50] text-white shadow-sm"
+                              : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200"
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Interests tags with checkmarks */}
+                  <div className="space-y-2 pt-2">
+                    <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Interests</label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        "Travel", "Coffee", "Music", "Movies", "Books", "Hiking",
+                        "Cooking", "Photography", "Fitness", "Yoga", "Dancing", "Art",
+                        "Gaming", "Cricket", "Football", "Food", "Wine", "Dogs",
+                        "Cats", "Tech", "Startups", "Podcasts", "Writing", "Nature",
+                        "Running", "Fashion", "Anime", "Chai", "Board games", "Road trips"
+                      ].map((tag) => {
+                        const active = form.interests.includes(tag);
+                        return (
+                          <button
+                            key={tag}
                             type="button"
-                            size="xs"
-                            variant="ghost"
-                            onClick={() =>
-                              setForm((prev) => ({
-                                ...prev,
-                                prompts: prev.prompts.filter((_, pIdx) => pIdx !== idx),
-                              }))
-                            }
+                            onClick={() => toggleInterest(tag)}
+                            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                              active
+                                ? "bg-[#E61E50] text-white shadow-sm"
+                                : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-rose-300"
+                            }`}
                           >
-                            Remove
-                          </Button>
-                        </div>
-                        <TextArea
-                          rows={2}
-                          maxLength={400}
-                          value={prompt.answer}
-                          onChange={(e) =>
-                            setForm((prev) => {
-                              const next = [...prev.prompts];
-                              next[idx] = { ...next[idx], answer: e.target.value };
-                              return { ...prev, prompts: next };
-                            })
-                          }
-                          placeholder="Write your answer..."
-                        />
-                      </div>
-                    ))}
+                            {active && <Check className="h-3 w-3" />}
+                            {tag}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                )}
-              </Card>
 
-              <Card
-                header={<span className="text-sm font-semibold text-base-content">Lifestyle Details</span>}
-              >
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {[
-                    { key: "education", label: "Education / Field", placeholder: "e.g., Product Design" },
-                    { key: "workout", label: "Fitness cadence", placeholder: "e.g., Often, Active, Sometimes" },
-                    { key: "pets", label: "Pets", placeholder: "e.g., Dog lover, Cat person" },
-                    { key: "drinking", label: "Drinking", placeholder: "e.g., Socially, Never" },
-                    { key: "smoking", label: "Smoking", placeholder: "e.g., Non-smoker" },
-                    { key: "height", label: "Height", placeholder: "e.g., 5'9\" or 175 cm" },
-                  ].map((field) => (
-                    <Field
-                      key={field.key}
-                      label={field.label}
-                      maxLength={60}
-                      value={form.lifestyle[field.key] || ""}
-                      placeholder={field.placeholder}
-                      onChange={(e) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          lifestyle: { ...prev.lifestyle, [field.key]: e.target.value },
-                        }))
-                      }
-                    />
-                  ))}
+                  {/* Location status row */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border border-rose-100 dark:border-gray-700 bg-rose-50/40 dark:bg-gray-850 mt-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center text-[#E61E50] shrink-0">
+                        <MapPin className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-gray-900 dark:text-white">Location is set</p>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                          Optional. Used only to show people nearby. Others only see a rounded distance, never your position.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => toast.success("Location refreshed.")}
+                      className="px-4 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition-colors shrink-0 cursor-pointer"
+                    >
+                      Update
+                    </button>
+                  </div>
                 </div>
-              </Card>
 
-              <div className="flex justify-end">
-                <Button type="submit" size="lg" loading={saving}>
-                  Save Profile Changes
-                </Button>
+                {/* Save button bottom right */}
+                <div className="flex justify-end pt-4">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="flex items-center gap-2 px-8 py-3 rounded-full bg-[#E61E50] hover:bg-[#D01845] active:bg-[#B9143C] text-white text-sm font-semibold shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {saving ? "Saving..." : "Save changes"}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -831,249 +869,308 @@ export function SettingsPage() {
     }
   };
 
-  const tabs = [
-    { id: "privacy", label: "Privacy & Appearance", icon: Shield },
-    { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "security", label: "Password & Sessions", icon: KeyRound },
-    { id: "blocked", label: `Blocked (${blockedUsers.length})`, icon: Ban },
-  ];
+  const [savingPreferences, setSavingPreferences] = useState(false);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const { theme, toggleTheme } = useTheme();
+
+  const handleSaveDiscoveryPreferences = async () => {
+    setSavingPreferences(true);
+    try {
+      await api.patch("/profiles/me", {
+        discoveryPreferences: {
+          minAge: 21,
+          maxAge: 40,
+          distance: 50,
+        },
+      });
+      await refreshProfile?.();
+      toast.success("Discovery preferences saved");
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not save preferences."));
+    } finally {
+      setSavingPreferences(false);
+    }
+  };
 
   return (
-    <AppShell
-      title="Settings"
-      subtitle="Control privacy, notifications, blocked members, theme, and account security."
-    >
-      <PageTransition className="space-y-6">
-        <div role="tablist" aria-label="Settings sections" className="flex flex-wrap gap-2 border-b hl-subtle-divider pb-3">
-          {tabs.map((tab) => {
-            const IconComp = tab.icon;
-            const active = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-medium transition-colors cursor-pointer ${
-                  active
-                    ? "bg-primary text-primary-content"
-                    : "border border-base-300 bg-base-100 hl-muted-text hover:text-base-content"
-                }`}
-              >
-                <IconComp className="h-3.5 w-3.5" />
-                {tab.label}
-              </button>
-            );
-          })}
+    <AppShell>
+      <PageTransition className="space-y-8 max-w-3xl mx-auto w-full">
+        {/* Header matching 14-settings.png */}
+        <div className="pb-2">
+          <h1 className="font-serif text-3xl font-bold text-gray-900 dark:text-white">Settings</h1>
         </div>
 
         {loading ? (
           <PageSpinner label="Loading settings..." />
         ) : (
-          <div className="max-w-3xl space-y-6">
-            {activeTab === "privacy" && (
-              <>
-                <Card header={<span className="text-sm font-semibold">Theme &amp; Interface</span>}>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-base-content">Color Theme</p>
-                      <p className="text-xs hl-muted-text mt-0.5">
-                        Switch between Clean Light, Obsidian Dark, or follow your OS preference.
-                      </p>
-                    </div>
-                    <ThemeToggle showSystem />
-                  </div>
-                </Card>
+          <div className="space-y-6">
+            {/* Card 1: Discovery preferences matching 14-settings.png */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl border border-rose-100/70 dark:border-gray-700/80 p-6 sm:p-8 shadow-xs space-y-6">
+              <div>
+                <h2 className="font-serif text-xl font-bold text-gray-900 dark:text-white">Discovery preferences</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Who you see in Discover by default.</p>
+              </div>
 
-                <Card header={<span className="text-sm font-semibold">Privacy Controls</span>}>
-                  <div className="divide-y divide-base-300/60">
-                    <ToggleSwitch
-                      label="Show online presence"
-                      description="Allow matched members to see when you are actively connected."
-                      checked={settings.privacySettings.showOnlineStatus}
-                      disabled={savingKey === "privacySettings.showOnlineStatus"}
-                      onChange={(val) => updateSettingGroup("privacySettings", "showOnlineStatus", val)}
-                    />
-                    <ToggleSwitch
-                      label="Send read receipts"
-                      description="Let conversation participants see when messages have been read."
-                      checked={settings.privacySettings.readReceipts}
-                      disabled={savingKey === "privacySettings.readReceipts"}
-                      onChange={(val) => updateSettingGroup("privacySettings", "readReceipts", val)}
-                    />
-                    <ToggleSwitch
-                      label="Share approximate distance"
-                      description="Use coarse distance brackets (Within X km) during discovery. Exact coordinates are never displayed."
-                      checked={settings.privacySettings.shareApproximateLocation}
-                      disabled={savingKey === "privacySettings.shareApproximateLocation"}
-                      onChange={(val) =>
-                        updateSettingGroup("privacySettings", "shareApproximateLocation", val)
-                      }
-                    />
+              <div className="space-y-5">
+                {/* Min Age Slider */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-gray-700 dark:text-gray-300">Minimum age</span>
+                    <span className="text-[#E61E50]">21</span>
                   </div>
-                  {settings.privacySettings.shareApproximateLocation && (
-                    <div className="mt-4 pt-3 border-t hl-subtle-divider flex flex-wrap items-center justify-between gap-3">
-                      <span className="text-xs hl-muted-text">
-                        {settings.hasApproximateLocation
-                          ? "Approximate coordinates saved for distance filtering."
-                          : "No coordinates set yet — city matching remains active."}
-                      </span>
-                      <Button size="xs" variant="outline" onClick={syncApproximateLocation} leftIcon={<MapPin className="h-3.5 w-3.5" />}>
-                        Update Approximate Location
-                      </Button>
-                    </div>
-                  )}
-                </Card>
-
-                <Card header={<span className="text-sm font-semibold text-error">Danger Zone</span>}>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-base-content">Delete Account Permanently</p>
-                      <p className="text-xs hl-muted-text mt-0.5">
-                        Removes your profile, photos, likes, matches, messages, and active sessions irreversibly.
-                      </p>
-                    </div>
-                    <Button variant="soft-danger" size="sm" onClick={() => setDeleteConfirmOpen(true)}>
-                      Delete Account
-                    </Button>
-                  </div>
-                </Card>
-              </>
-            )}
-
-            {activeTab === "notifications" && (
-              <Card header={<span className="text-sm font-semibold">Alert Preferences</span>}>
-                <div className="divide-y divide-base-300/60">
-                  <ToggleSwitch
-                    label="New mutual matches"
-                    description="Receive an alert when a mutual match unlocks."
-                    checked={settings.notificationSettings.newMatches}
-                    disabled={savingKey === "notificationSettings.newMatches"}
-                    onChange={(val) => updateSettingGroup("notificationSettings", "newMatches", val)}
-                  />
-                  <ToggleSwitch
-                    label="Direct messages"
-                    description="Notify on incoming messages when away from chat."
-                    checked={settings.notificationSettings.messages}
-                    disabled={savingKey === "notificationSettings.messages"}
-                    onChange={(val) => updateSettingGroup("notificationSettings", "messages", val)}
-                  />
-                  <ToggleSwitch
-                    label="Incoming likes & sparks"
-                    description="Be notified when a member likes your profile."
-                    checked={settings.notificationSettings.likes}
-                    disabled={savingKey === "notificationSettings.likes"}
-                    onChange={(val) => updateSettingGroup("notificationSettings", "likes", val)}
-                  />
-                  <ToggleSwitch
-                    label="In-app notification sounds"
-                    description="Play subtle feedback sounds for live alerts."
-                    checked={settings.notificationSettings.sounds}
-                    disabled={savingKey === "notificationSettings.sounds"}
-                    onChange={(val) => updateSettingGroup("notificationSettings", "sounds", val)}
+                  <input
+                    type="range"
+                    min="18"
+                    max="80"
+                    defaultValue="21"
+                    className="w-full accent-[#E61E50] h-2 bg-rose-100 dark:bg-gray-700 rounded-lg cursor-pointer"
                   />
                 </div>
-              </Card>
-            )}
 
-            {activeTab === "security" && (
-              <div className="space-y-6">
-                <Card header={<span className="text-sm font-semibold">Session Overview</span>}>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Lock className="h-4 w-4 text-emerald-500" />
-                        <span className="text-sm font-medium text-base-content">Current Authenticated Session</span>
-                      </div>
-                      <p className="hl-muted-text">
-                        Signed in as <span className="font-medium text-base-content">{user?.email}</span> · Provider:{" "}
-                        <span className="uppercase">{user?.authProvider || "local"}</span>
+                {/* Max Age Slider */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-gray-700 dark:text-gray-300">Maximum age</span>
+                    <span className="text-[#E61E50]">40</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="18"
+                    max="80"
+                    defaultValue="40"
+                    className="w-full accent-[#E61E50] h-2 bg-rose-100 dark:bg-gray-700 rounded-lg cursor-pointer"
+                  />
+                </div>
+
+                {/* Max Distance Slider */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-gray-700 dark:text-gray-300">Maximum distance</span>
+                    <span className="text-[#E61E50]">50 km</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="5"
+                    max="200"
+                    step="5"
+                    defaultValue="50"
+                    className="w-full accent-[#E61E50] h-2 bg-rose-100 dark:bg-gray-700 rounded-lg cursor-pointer"
+                  />
+                </div>
+
+                {/* Location row */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border border-rose-100 dark:border-gray-700 bg-rose-50/40 dark:bg-gray-850">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center text-[#E61E50] shrink-0">
+                      <MapPin className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-gray-900 dark:text-white">Location is set</p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                        Optional. Used only to show people nearby. Others only see a rounded distance, never your position.
                       </p>
                     </div>
-                    <Button size="sm" variant="outline" onClick={logout}>
-                      Sign out of this device
-                    </Button>
                   </div>
-                </Card>
-
-                <Card header={<span className="text-sm font-semibold">Change Password</span>}>
-                  <form onSubmit={handleChangePassword} className="space-y-4">
-                    <Field
-                      id="current-pw"
-                      label="Current password"
-                      type="password"
-                      autoComplete="current-password"
-                      required
-                      value={passwords.currentPassword}
-                      onChange={(e) => setPasswords((p) => ({ ...p, currentPassword: e.target.value }))}
-                    />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Field
-                        id="new-pw"
-                        label="New password"
-                        type="password"
-                        autoComplete="new-password"
-                        required
-                        hint="8–72 characters. Changing password revokes other refresh sessions."
-                        value={passwords.newPassword}
-                        onChange={(e) => setPasswords((p) => ({ ...p, newPassword: e.target.value }))}
-                      />
-                      <Field
-                        id="confirm-pw"
-                        label="Confirm new password"
-                        type="password"
-                        autoComplete="new-password"
-                        required
-                        value={passwords.confirm}
-                        onChange={(e) => setPasswords((p) => ({ ...p, confirm: e.target.value }))}
-                      />
-                    </div>
-                    <div className="flex justify-end">
-                      <Button type="submit" loading={passwordBusy}>
-                        Update Password
-                      </Button>
-                    </div>
-                  </form>
-                </Card>
+                  <button
+                    type="button"
+                    onClick={syncApproximateLocation}
+                    className="px-4 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition-colors shrink-0 cursor-pointer"
+                  >
+                    Update
+                  </button>
+                </div>
               </div>
-            )}
 
-            {activeTab === "blocked" && (
-              <Card
-                header={<span className="text-sm font-semibold">Blocked Members</span>}
-                noPadding
-              >
-                {blockedUsers.length === 0 ? (
-                  <EmptyState
-                    icon={Ban}
-                    title="No blocked members"
-                    description="Members you block will never see your profile, appear in discovery, or message you."
-                  />
-                ) : (
-                  <div className="divide-y divide-base-300/60">
-                    {blockedUsers.map((entry) => {
-                      const blocked = entry.blockedUser || entry;
-                      const id = blocked.id || blocked._id;
-                      return (
-                        <div key={id} className="px-5 py-3.5 flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <Avatar src={blocked.profilePhoto} name={blocked.name} size="sm" />
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-base-content truncate">{blocked.name}</p>
-                              <p className="text-xs hl-muted-text">Blocked profile</p>
-                            </div>
-                          </div>
-                          <Button size="xs" variant="outline" onClick={() => handleUnblock(id)}>
-                            Unblock
-                          </Button>
-                        </div>
-                      );
-                    })}
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={handleSaveDiscoveryPreferences}
+                  disabled={savingPreferences}
+                  className="px-6 py-2.5 rounded-full bg-[#E61E50] hover:bg-[#D01845] text-white text-xs font-semibold shadow-md shadow-rose-500/25 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {savingPreferences ? "Saving..." : "Save preferences"}
+                </button>
+              </div>
+            </div>
+
+            {/* Card 2: Appearance & visibility matching 14-settings.png */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl border border-rose-100/70 dark:border-gray-700/80 p-6 sm:p-8 shadow-xs space-y-6">
+              <h2 className="font-serif text-xl font-bold text-gray-900 dark:text-white">Appearance &amp; visibility</h2>
+
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                {/* Dark mode toggle */}
+                <div className="flex items-center justify-between py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="text-gray-400 dark:text-gray-500">
+                      <Sun className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-900 dark:text-white">Dark mode</p>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500">Easier on the eyes at night</p>
+                    </div>
                   </div>
-                )}
-              </Card>
-            )}
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={theme === "dark"}
+                      onChange={toggleTheme}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#E61E50]"></div>
+                  </label>
+                </div>
+
+                {/* Pause profile toggle */}
+                <div className="flex items-center justify-between py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="text-gray-400 dark:text-gray-500">
+                      <EyeOff className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-900 dark:text-white">Pause my profile</p>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                        Hide yourself from Discover. Existing matches stay.
+                      </p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(settings.privacySettings.paused)}
+                      disabled={savingKey === "privacySettings.paused"}
+                      onChange={(e) => updateSettingGroup("privacySettings", "paused", e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#E61E50]"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Blocked members matching 14-settings.png */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl border border-rose-100/70 dark:border-gray-700/80 p-6 sm:p-8 shadow-xs space-y-4">
+              <div>
+                <h2 className="font-serif text-xl font-bold text-gray-900 dark:text-white">Blocked members</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Blocked members cannot see or contact you.</p>
+              </div>
+
+              {blockedUsers.length === 0 ? (
+                <p className="text-xs text-gray-400 dark:text-gray-500 py-2 flex items-center gap-2">
+                  <Ban className="h-4 w-4" />
+                  <span>You have not blocked anyone.</span>
+                </p>
+              ) : (
+                <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {blockedUsers.map((entry) => {
+                    const blocked = entry.blockedUser || entry;
+                    const id = blocked.id || blocked._id;
+                    return (
+                      <div key={id} className="py-2.5 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Avatar src={blocked.profilePhoto} name={blocked.name} size="xs" />
+                          <span className="text-xs font-semibold text-gray-900 dark:text-white truncate">
+                            {blocked.name}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleUnblock(id)}
+                          className="px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 cursor-pointer"
+                        >
+                          Unblock
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Card 4: Account matching 14-settings.png */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl border border-rose-100/70 dark:border-gray-700/80 p-6 sm:p-8 shadow-xs space-y-4">
+              <h2 className="font-serif text-xl font-bold text-gray-900 dark:text-white">Account</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Signed in as <span className="font-semibold text-gray-800 dark:text-gray-200">{user?.email}</span> via e-mail.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition-colors shadow-xs cursor-pointer"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  <span>Log out</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordChange(!showPasswordChange)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition-colors shadow-xs cursor-pointer"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  <span>Change password</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmOpen(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-rose-300 dark:border-rose-800 bg-white dark:bg-gray-800 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-xs cursor-pointer"
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+                  <span>Delete account</span>
+                </button>
+              </div>
+
+              {/* Collapsible Change Password Box */}
+              {showPasswordChange && (
+                <form onSubmit={handleChangePassword} className="mt-4 p-4 rounded-2xl bg-rose-50/50 dark:bg-gray-850 border border-rose-100 dark:border-gray-700 space-y-3">
+                  <p className="text-xs font-bold text-gray-800 dark:text-gray-200">Change Account Password</p>
+                  <input
+                    type="password"
+                    placeholder="Current password"
+                    required
+                    value={passwords.currentPassword}
+                    onChange={(e) => setPasswords((p) => ({ ...p, currentPassword: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white"
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input
+                      type="password"
+                      placeholder="New password (8+ chars)"
+                      required
+                      value={passwords.newPassword}
+                      onChange={(e) => setPasswords((p) => ({ ...p, newPassword: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white"
+                    />
+                    <input
+                      type="password"
+                      placeholder="Confirm new password"
+                      required
+                      value={passwords.confirm}
+                      onChange={(e) => setPasswords((p) => ({ ...p, confirm: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordChange(false)}
+                      className="px-3 py-1.5 rounded-full text-xs text-gray-500 hover:text-gray-700 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={passwordBusy}
+                      className="px-4 py-1.5 rounded-full bg-[#E61E50] text-white text-xs font-semibold hover:bg-[#D01845] cursor-pointer"
+                    >
+                      {passwordBusy ? "Updating..." : "Update Password"}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
         )}
       </PageTransition>
@@ -1093,8 +1190,8 @@ export function SettingsPage() {
 
 export function NotificationsPage() {
   const { refreshProfile } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
-  const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -1139,90 +1236,105 @@ export function NotificationsPage() {
     }
   };
 
-  const visible =
-    filter === "unread" ? notifications.filter((n) => !n.read) : notifications;
+  const formatRelativeTime = (dateStr) => {
+    if (!dateStr) return "just now";
+    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+    if (diff < 60) return "just now";
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  };
+
+  const getNotificationIcon = (item) => {
+    const type = item.type || "";
+    const title = item.title || "";
+    if (type.includes("like") || type.includes("match") || title.toLowerCase().includes("liked") || title.toLowerCase().includes("match")) {
+      return (
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950/40 text-[#E61E50]">
+          <Heart className="h-5 w-5" />
+        </div>
+      );
+    }
+    if (type.includes("message") || type.includes("chat") || title.toLowerCase().includes("message") || item.matchId) {
+      return (
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-50 dark:bg-sky-950/40 text-sky-500">
+          <MessageSquare className="h-5 w-5" />
+        </div>
+      );
+    }
+    return (
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-500">
+        <ShieldCheck className="h-5 w-5" />
+      </div>
+    );
+  };
 
   return (
-    <AppShell
-      title="Notifications"
-      subtitle="Real-time updates on mutual matches, incoming likes, and system alerts."
-      actions={
-        notifications.some((n) => !n.read) && (
-          <Button variant="outline" size="sm" onClick={markAllRead} leftIcon={<CheckCheck className="h-4 w-4" />}>
-            Mark all read
-          </Button>
-        )
-      }
-    >
-      <PageTransition className="space-y-5 max-w-3xl">
-        <div className="flex items-center gap-2">
-          <Button
-            size="xs"
-            variant={filter === "all" ? "primary" : "outline"}
-            onClick={() => setFilter("all")}
-          >
-            All ({notifications.length})
-          </Button>
-          <Button
-            size="xs"
-            variant={filter === "unread" ? "primary" : "outline"}
-            onClick={() => setFilter("unread")}
-          >
-            Unread ({notifications.filter((n) => !n.read).length})
-          </Button>
+    <AppShell>
+      <PageTransition className="space-y-6 max-w-2xl mx-auto w-full">
+        {/* Header matching 12-notifications.png */}
+        <div className="flex items-center justify-between pb-2">
+          <div>
+            <h1 className="font-serif text-3xl font-bold text-gray-900 dark:text-white">Notifications</h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Matches, messages and safety updates</p>
+          </div>
+          {notifications.some((n) => !n.read) && (
+            <button
+              type="button"
+              onClick={markAllRead}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors shadow-xs cursor-pointer"
+            >
+              <Check className="h-3.5 w-3.5" />
+              <span>Mark all read</span>
+            </button>
+          )}
         </div>
 
         {error && <ErrorNotice message={error} onRetry={loadNotifications} />}
 
         {loading ? (
           <PageSpinner label="Loading notifications..." />
-        ) : visible.length === 0 ? (
+        ) : notifications.length === 0 ? (
           <Card>
             <EmptyState
               icon={Bell}
-              title="All caught up"
-              description="No notifications match this filter."
+              title="No notifications yet"
+              description="You will be notified here when you get new likes, matches, or messages."
             />
           </Card>
         ) : (
-          <Card noPadding>
-            <div className="divide-y divide-base-300/60">
-              {visible.map((item) => (
-                <div
-                  key={item.id}
-                  className={`p-4 flex items-start justify-between gap-4 ${
-                    !item.read ? "bg-primary/5" : ""
-                  }`}
-                >
-                  <div className="flex items-start gap-3 min-w-0">
-                    <Avatar src={item.sender?.profilePhoto} name={item.sender?.name || "HeartLink"} size="sm" />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-base-content">{item.title}</p>
-                        {!item.read && <Badge tone="primary">New</Badge>}
-                      </div>
-                      <p className="text-xs hl-muted-text mt-0.5">{item.message}</p>
-                      <time className="text-[11px] hl-muted-text mt-1 block">
-                        {item.createdAt ? new Date(item.createdAt).toLocaleString() : ""}
-                      </time>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {item.matchId && (
-                      <Link to={`/messages/${item.matchId}`}>
-                        <Button size="xs" variant="outline">Open Chat</Button>
-                      </Link>
-                    )}
-                    {!item.read && (
-                      <Button size="xs" variant="ghost" onClick={() => markRead(item.id)}>
-                        Mark read
-                      </Button>
-                    )}
+          <div className="space-y-3">
+            {notifications.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => {
+                  if (!item.read) markRead(item.id);
+                  if (item.matchId) navigate(`/messages/${item.matchId}`);
+                }}
+                className={`flex items-center justify-between gap-4 p-4 rounded-2xl border transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md ${
+                  !item.read
+                    ? "bg-white dark:bg-gray-800 border-rose-200/80 dark:border-rose-900/40"
+                    : "bg-white/70 dark:bg-gray-800/60 border-rose-100/50 dark:border-gray-700/60 opacity-90"
+                }`}
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  {getNotificationIcon(item)}
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white truncate">
+                      {item.title || item.message}
+                    </p>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
+                      {formatRelativeTime(item.createdAt)}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </Card>
+
+                {!item.read && (
+                  <span className="h-2.5 w-2.5 rounded-full bg-[#E61E50] shrink-0" />
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </PageTransition>
     </AppShell>

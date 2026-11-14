@@ -2,7 +2,12 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
+  AlertCircle,
   ArrowRight,
+  Eye,
+  EyeOff,
+  FlaskConical,
+  Heart,
   Lock,
   Mail,
   Shield,
@@ -11,22 +16,17 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { apiErrorMessage } from "../services/api";
 import { getDashboardForRole } from "../components/ProtectedRoute";
-import {
-  Badge,
-  Button,
-  FadeInView,
-  Field,
-  Logo,
-  ThemeToggle,
-} from "../components/ui";
+import { firebaseConfigured, getGoogleIdToken } from "../services/firebase";
+import { Logo, ThemeToggle } from "../components/ui";
 
 export function LoginPage() {
-  const { authenticate } = useAuth();
+  const { authenticate, authenticateWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState("");
@@ -51,6 +51,19 @@ export function LoginPage() {
     return Object.keys(next).length === 0;
   };
 
+  const handleLoginSuccess = (user) => {
+    toast.success(`Welcome back, ${user.name || "Member"}!`);
+    const targetDashboard = getDashboardForRole(user.role);
+    const destination =
+      location.state?.from &&
+      !location.state.from.includes("/login") &&
+      !location.state.from.includes("/admin/login")
+        ? location.state.from
+        : targetDashboard;
+
+    navigate(destination, { replace: true });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setServerError("");
@@ -65,18 +78,7 @@ export function LoginPage() {
 
       const result = await authenticate("login", payload);
       if (result?.user) {
-        toast.success(`Welcome back, ${result.user.name || "Member"}!`);
-
-        // Read verified role from backend response
-        const targetDashboard = getDashboardForRole(result.user.role);
-        const destination =
-          location.state?.from &&
-          !location.state.from.includes("/login") &&
-          !location.state.from.includes("/admin/login")
-            ? location.state.from
-            : targetDashboard;
-
-        navigate(destination, { replace: true });
+        handleLoginSuccess(result.user);
       } else {
         setServerError(result?.message || "Authentication failed. Please verify credentials.");
       }
@@ -89,194 +91,316 @@ export function LoginPage() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setServerError("");
+    setBusy(true);
+    try {
+      const idToken = await getGoogleIdToken();
+      const result = await authenticateWithGoogle(idToken, {});
+      if (result?.user) {
+        handleLoginSuccess(result.user);
+      } else {
+        setServerError(result?.message || "Google sign-in could not be completed.");
+      }
+    } catch (err) {
+      setServerError(apiErrorMessage(err, err.message || "Google sign-in failed."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setDemoUser = (email, pwd) => {
+    setIdentifier(email);
+    setPassword(pwd);
+    setErrors({});
+    setServerError("");
+  };
+
   return (
-    <div className="min-h-dvh grid grid-cols-1 lg:grid-cols-12 bg-base-200 text-base-content transition-colors duration-200">
-      {/* Left Brand Panel (Desktop) */}
-      <aside className="hidden lg:flex lg:col-span-5 flex-col justify-between bg-gradient-to-br from-[#180d17] via-[#100810] to-[#1a0a14] text-slate-100 p-10 border-r border-rose-500/10 relative overflow-hidden">
+    <div className="min-h-dvh flex flex-col lg:flex-row bg-[#FFF5F4] dark:bg-[#151219] text-gray-900 dark:text-gray-100 font-sans transition-colors duration-200">
+      {/* Left Gradient Brand Panel (Desktop 50%) */}
+      <aside className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-gradient-to-br from-[#E61E50] via-[#A81B5B] to-[#580B44] text-white p-12 lg:p-16 relative overflow-hidden">
+        {/* Soft glowing ambient orbs */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-rose-500/20 blur-3xl animate-pulse"
+          className="pointer-events-none absolute -top-20 -left-20 h-96 w-96 rounded-full bg-white/10 blur-3xl"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-pink-500/15 blur-3xl"
+          className="pointer-events-none absolute bottom-10 right-10 h-80 w-80 rounded-full bg-rose-400/20 blur-3xl"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-black/20 blur-2xl"
         />
 
+        {/* Top Logo */}
         <div className="relative z-10 flex items-center justify-between">
-          <Logo light />
+          <Link to="/" className="inline-flex items-center gap-2.5 group">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white shadow-md transition-transform group-hover:scale-105">
+              <Heart className="h-5 w-5 fill-[#E61E50] text-[#E61E50]" />
+            </span>
+            <span className="font-serif text-2xl font-bold tracking-tight text-white">
+              HeartLink<span className="text-rose-200">.</span>
+            </span>
+          </Link>
           <Link
             to="/"
-            className="text-xs text-rose-300 hover:text-white transition-colors inline-flex items-center gap-1.5"
+            className="text-xs font-medium text-rose-100/80 hover:text-white transition-colors"
           >
             ← Back to Home
           </Link>
         </div>
 
-        <div className="relative z-10 space-y-6 my-auto py-8">
-          <div className="aspect-[16/10] w-full overflow-hidden rounded-2xl border border-rose-500/20 shadow-2xl relative">
-            <img
-              src="/heartlink-couple.jpg"
-              alt="HeartLink connections artwork"
-              fetchPriority="high"
-              decoding="async"
-              className="h-full w-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-5">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-[#F8DCE5]">Where Hearts Find Their Connection</p>
-                <p className="text-sm font-bold text-white">Discover &bull; Connect &bull; Match &bull; Love</p>
-              </div>
-            </div>
-          </div>
+        {/* Center Editorial Headline */}
+        <div className="relative z-10 my-auto py-12 max-w-lg space-y-5">
+          <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-[1.12]">
+            Find someone who gets your vibe.
+          </h1>
+          <p className="text-rose-100/90 text-base sm:text-lg leading-relaxed font-normal">
+            Meaningful connections start with a single spark. Join thousands of members meeting every day.
+          </p>
+        </div>
 
-          <div className="space-y-3">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#F45B83]">
-              Romantic &bull; Elegant &bull; Trustworthy
-            </p>
-            <h2 className="text-2xl font-semibold tracking-tight text-white leading-snug">
-              Intentional Dating, Verified Safety &amp; Chemistry.
-            </h2>
-            <p className="text-sm text-rose-200/70 leading-relaxed">
-              Sign in to your Heartlink account. The system automatically detects your credentials and routes you directly to your authorized workspace.
-            </p>
-          </div>
+        {/* Bottom Copyright */}
+        <div className="relative z-10 pt-4 text-xs text-rose-200/70">
+          &copy; {new Date().getFullYear()} HeartLink. All rights reserved.
+        </div>
+      </aside>
 
-          <div className="grid grid-cols-2 gap-3 pt-1 text-xs text-rose-100">
-            <div className="rounded-xl border border-rose-500/20 bg-rose-950/30 p-3 flex items-center gap-2.5">
-              <ShieldCheck className="h-4 w-4 text-rose-400 shrink-0" />
-              <span>Role-governed RBAC</span>
-            </div>
-            <div className="rounded-xl border border-rose-500/20 bg-rose-950/30 p-3 flex items-center gap-2.5">
-              <Lock className="h-4 w-4 text-rose-400 shrink-0" />
-              <span>Rotating JWT Sessions</span>
-            </div>
+      {/* Right Form Panel (50%) */}
+      <main className="w-full lg:w-1/2 flex flex-col justify-center px-6 py-10 sm:px-12 md:px-16 lg:px-20 relative">
+        {/* Mobile top header bar */}
+        <div className="flex items-center justify-between lg:hidden pb-6 mb-4 border-b border-rose-200/40 dark:border-rose-900/30">
+          <Logo />
+          <div className="flex items-center gap-3">
+            <ThemeToggle compact />
+            <Link to="/" className="text-xs text-gray-500 hover:text-gray-900 dark:text-gray-400">
+              Home
+            </Link>
           </div>
         </div>
 
-        <p className="relative z-10 text-xs text-slate-500">
-          HeartLink Enterprise Security &bull; End-to-End Authenticated
-        </p>
-      </aside>
+        {/* Desktop theme toggle & home link at top-right */}
+        <div className="hidden lg:flex items-center justify-end gap-3 absolute top-8 right-10">
+          <ThemeToggle compact />
+          <Link to="/" className="text-xs text-gray-500 hover:text-gray-900 dark:text-gray-400">
+            Home
+          </Link>
+        </div>
 
-      {/* Right Login Form Panel */}
-      <main className="lg:col-span-7 flex flex-col justify-center px-4 py-8 sm:px-8 lg:px-16">
-        <div className="mx-auto w-full max-w-md space-y-6">
-          {/* Header Bar */}
-          <div className="flex items-center justify-between pb-2 border-b hl-subtle-divider">
-            <Logo />
-            <div className="flex items-center gap-3">
-              <ThemeToggle />
-              <Link to="/" className="text-xs hl-muted-text hover:text-base-content transition-colors">
-                Home
-              </Link>
-            </div>
-          </div>
-
-          <FadeInView className="space-y-2">
-            <Badge tone="primary" dot>
-              Unified Sign In
-            </Badge>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-base-content">
+        <div className="mx-auto w-full max-w-[420px] space-y-6">
+          {/* Welcome Title */}
+          <div className="space-y-2">
+            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white tracking-tight">
               Welcome back
-            </h1>
-            <p className="text-sm hl-muted-text">
-              Sign in with your email or username to access your account.
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Log in to see who liked you and pick up your conversations.
             </p>
-          </FadeInView>
+          </div>
 
           {/* Server Error Alert */}
           {serverError && (
-            <div role="alert" className="alert alert-error text-xs rounded-xl shadow-sm border border-error/20">
-              <Shield className="h-4 w-4 shrink-0" />
+            <div
+              role="alert"
+              className="rounded-2xl border border-rose-200 bg-rose-50 dark:bg-rose-950/40 dark:border-rose-800/40 p-4 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-3 shadow-sm"
+            >
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-[#E61E50]" />
               <span>{serverError}</span>
             </div>
           )}
 
-          {/* Common Login Form */}
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            {/* Email / Username Field */}
-            <Field
-              id="login-identifier"
-              label="Email or Username"
-              type="text"
-              name="identifier"
-              autoComplete="username email"
-              required
-              placeholder="name@example.com"
-              value={identifier}
-              onChange={(e) => {
-                setIdentifier(e.target.value);
-                if (errors.identifier) setErrors((prev) => ({ ...prev, identifier: undefined }));
-              }}
-              error={errors.identifier}
-              hint="Enter the email associated with your account"
-              leftIcon={<Mail className="h-4 w-4" />}
-            />
+          {/* Continue with Google Button */}
+          {firebaseConfigured ? (
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={busy}
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-semibold shadow-sm hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                />
+              </svg>
+              <span>Continue with Google</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled
+              title="Google authentication is not configured in this environment"
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 text-sm font-semibold opacity-60 cursor-not-allowed"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+              </svg>
+              <span>Continue with Google</span>
+            </button>
+          )}
 
-            {/* Password Field with built-in Reveal Toggle */}
-            <Field
-              id="login-password"
-              label="Password"
-              type="password"
-              name="password"
-              autoComplete="current-password"
-              required
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
-              }}
-              error={errors.password}
-              leftIcon={<Lock className="h-4 w-4" />}
-            />
+          {/* Divider */}
+          <div className="relative flex items-center justify-center">
+            <div className="w-full border-t border-gray-200 dark:border-gray-800" />
+            <span className="bg-[#FFF5F4] dark:bg-[#151219] px-3 text-[10px] sm:text-xs font-semibold tracking-wider text-gray-400 uppercase">
+              OR LOG IN WITH E-MAIL
+            </span>
+          </div>
+
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
+            {/* Email Field */}
+            <div className="space-y-1">
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                  <Mail className="h-4 w-4" />
+                </span>
+                <input
+                  id="login-identifier"
+                  type="text"
+                  name="identifier"
+                  autoComplete="username email"
+                  required
+                  placeholder="you@example.com"
+                  value={identifier}
+                  onChange={(e) => {
+                    setIdentifier(e.target.value);
+                    if (errors.identifier) setErrors((prev) => ({ ...prev, identifier: undefined }));
+                  }}
+                  className={`w-full pl-10 pr-4 py-3 rounded-xl border bg-white dark:bg-gray-800/80 text-sm text-gray-900 dark:text-white placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#E61E50] focus:border-transparent transition-all ${
+                    errors.identifier
+                      ? "border-rose-400 dark:border-rose-600"
+                      : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                  }`}
+                />
+              </div>
+              {errors.identifier && (
+                <p className="text-[11px] text-rose-500 pl-1">{errors.identifier}</p>
+              )}
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-1">
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                  <Lock className="h-4 w-4" />
+                </span>
+                <input
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  autoComplete="current-password"
+                  required
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
+                  }}
+                  className={`w-full pl-10 pr-10 py-3 rounded-xl border bg-white dark:bg-gray-800/80 text-sm text-gray-900 dark:text-white placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#E61E50] focus:border-transparent transition-all ${
+                    errors.password
+                      ? "border-rose-400 dark:border-rose-600"
+                      : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-[11px] text-rose-500 pl-1">{errors.password}</p>
+              )}
+            </div>
 
             {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between text-xs pt-1">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
+            <div className="flex items-center justify-between text-xs pt-0.5">
+              <label className="flex items-center gap-2 cursor-pointer select-none text-gray-600 dark:text-gray-400">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="checkbox checkbox-xs checkbox-primary rounded"
+                  className="rounded border-gray-300 text-[#E61E50] focus:ring-[#E61E50] h-3.5 w-3.5"
                 />
-                <span className="hl-muted-text">Remember me</span>
+                <span>Remember me</span>
               </label>
               <Link
                 to="/forgot-password"
-                className="font-medium hl-accent-text hover:underline transition-colors"
+                className="font-medium text-[#E61E50] hover:underline transition-colors"
               >
                 Forgot password?
               </Link>
             </div>
 
-            {/* Submit Login Button */}
-            <Button
+            {/* Submit Pill Button */}
+            <button
               type="submit"
-              variant="primary"
-              size="lg"
-              fullWidth
-              loading={busy}
               disabled={busy}
-              rightIcon={!busy && <ArrowRight className="h-4 w-4" />}
-              className="mt-2 rounded-xl shadow-lg shadow-rose-500/25"
+              className="w-full mt-2 py-3.5 px-6 rounded-full bg-[#E61E50] hover:bg-[#D01845] active:bg-[#B9143C] text-white text-sm font-semibold shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
-              {busy ? "Signing in..." : "Sign In to Account"}
-            </Button>
+              {busy ? "Signing in..." : "Log in"}
+            </button>
           </form>
 
-          {/* Registration Prompt for New Members */}
-          <div className="text-center pt-2">
-            <p className="text-xs hl-muted-text">
-              Don&apos;t have an account yet?{" "}
-              <Link to="/signup" className="font-semibold hl-accent-text hover:underline">
-                Create Member Profile
+          {/* Links */}
+          <div className="text-center space-y-2 pt-1 text-xs text-gray-600 dark:text-gray-400">
+            <p>
+              New to HeartLink?{" "}
+              <Link to="/signup" className="font-semibold text-[#E61E50] hover:underline">
+                Create an account
+              </Link>
+            </p>
+            <p>
+              <Link to="/admin/dashboard" className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:underline">
+                Admin panel login
               </Link>
             </p>
           </div>
 
-          {/* Trust Banner */}
-          <div className="pt-4 border-t hl-subtle-divider flex items-center justify-center gap-6 text-[11px] hl-muted-text">
+          {/* DEMO MODE Box (Dev & QA Friendly) */}
+          <div className="rounded-2xl border border-amber-200/80 bg-[#FEF6EC] dark:bg-amber-950/25 dark:border-amber-800/40 p-4 space-y-2 text-xs">
+            <div className="flex items-center gap-2 font-semibold text-amber-900 dark:text-amber-200 uppercase tracking-wider text-[10px]">
+              <FlaskConical className="h-3.5 w-3.5 text-amber-600" />
+              <span>DEMO MODE (DEVELOPMENT ONLY)</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setDemoUser("suyogsankpal36@gmail.com", "Admin@123")}
+                className="py-2 px-3 rounded-xl bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-900 text-gray-800 dark:text-gray-200 hover:bg-amber-50 dark:hover:bg-gray-700 font-medium transition-colors cursor-pointer text-center truncate"
+              >
+                Demo: Aarav
+              </button>
+              <button
+                type="button"
+                onClick={() => setDemoUser("priya@heartlink.app", "Priya@123")}
+                className="py-2 px-3 rounded-xl bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-900 text-gray-800 dark:text-gray-200 hover:bg-amber-50 dark:hover:bg-gray-700 font-medium transition-colors cursor-pointer text-center truncate"
+              >
+                Demo: Meera
+              </button>
+            </div>
+          </div>
+
+          {/* Trust Footnote */}
+          <div className="pt-2 flex items-center justify-center gap-6 text-[11px] text-gray-400">
             <span className="inline-flex items-center gap-1.5">
               <ShieldCheck className="h-3.5 w-3.5 text-rose-500" /> Secure SSL
             </span>

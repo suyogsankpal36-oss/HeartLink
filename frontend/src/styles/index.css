@@ -8,28 +8,28 @@
   default: true;
   color-scheme: light;
   --color-base-100: #FFFFFF;
-  --color-base-200: #FDF4F7;
-  --color-base-300: #F8DCE5;
-  --color-base-content: #151219;
-  --color-primary: #F45B83;
+  --color-base-200: #FFF5F4;
+  --color-base-300: #FCE8E6;
+  --color-base-content: #1B1720;
+  --color-primary: #E61E50;
   --color-primary-content: #FFFFFF;
-  --color-secondary: #681D3B;
+  --color-secondary: #9F1239;
   --color-secondary-content: #FFFFFF;
-  --color-accent: #681D3B;
+  --color-accent: #E61E50;
   --color-accent-content: #FFFFFF;
-  --color-neutral: #151219;
-  --color-neutral-content: #F8DCE5;
+  --color-neutral: #1B1720;
+  --color-neutral-content: #FFF5F4;
   --color-info: #0284c7;
   --color-info-content: #FFFFFF;
   --color-success: #059669;
   --color-success-content: #FFFFFF;
   --color-warning: #d97706;
   --color-warning-content: #FFFFFF;
-  --color-error: #F45B83;
+  --color-error: #E61E50;
   --color-error-content: #FFFFFF;
-  --radius-selector: 0.75rem;
+  --radius-selector: 1.5rem;
   --radius-field: 0.75rem;
-  --radius-box: 1rem;
+  --radius-box: 1.5rem;
   --size-selector: 0.25rem;
   --size-field: 0.25rem;
   --border: 1px;
@@ -73,15 +73,16 @@
 
 :root {
   color-scheme: light dark;
-  --hl-font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --hl-border: rgba(104, 29, 59, 0.14);
-  --hl-border-strong: rgba(244, 91, 131, 0.28);
-  --hl-surface-muted: #F8DCE5;
-  --hl-text-muted: #6B5E6D;
-  --hl-text-subtle: #8B7C8E;
-  --hl-accent-link: #C2295D;
-  --hl-heart: #F45B83;
-  --hl-heart-bg: #F8DCE5;
+  --hl-font-serif: "Playfair Display", Georgia, "Times New Roman", serif;
+  --hl-font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --hl-border: rgba(230, 30, 80, 0.12);
+  --hl-border-strong: rgba(230, 30, 80, 0.28);
+  --hl-surface-muted: #FFF0ED;
+  --hl-text-muted: #756870;
+  --hl-text-subtle: #94878F;
+  --hl-accent-link: #E61E50;
+  --hl-heart: #E61E50;
+  --hl-heart-bg: #FFE5EC;
   --hl-shadow-xs: 0 1px 2px rgba(104, 29, 59, 0.04);
   --hl-shadow-sm: 0 1px 3px rgba(104, 29, 59, 0.06), 0 1px 2px rgba(104, 29, 59, 0.04);
   --hl-shadow-md: 0 8px 24px -4px rgba(104, 29, 59, 0.08), 0 2px 6px -1px rgba(104, 29, 59, 0.04);
@@ -169,6 +170,14 @@
 
 .hl-tabular {
   font-variant-numeric: tabular-nums;
+}
+
+.font-serif {
+  font-family: var(--hl-font-serif);
+}
+
+.font-sans {
+  font-family: var(--hl-font-sans);
 }
 
 .hl-surface-card {

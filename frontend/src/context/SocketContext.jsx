@@ -37,7 +37,7 @@ export function SocketProvider({ children }) {
       // Resolve the token at every handshake so a rotated access token is used
       // without constructing another Socket.IO client.
       auth: (callback) => callback({ token: getAccessToken() }),
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"],
       withCredentials: true,
       autoConnect: false,
       reconnection: true,

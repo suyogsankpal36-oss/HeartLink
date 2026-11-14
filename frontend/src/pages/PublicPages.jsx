@@ -5,9 +5,12 @@ import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
+  Calendar,
   CheckCircle2,
   Clock,
   Compass,
+  Eye,
+  EyeOff,
   Heart,
   HelpCircle,
   Lock,
@@ -16,6 +19,7 @@ import {
   Shield,
   ShieldCheck,
   Sparkles,
+  User,
   UserCheck,
   Users,
 } from "lucide-react";
@@ -769,286 +773,357 @@ export function AuthPage({ mode = "login" }) {
 
   const showResendAction = !signup && /verify|verification/i.test(serverError);
 
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
-    <div className="min-h-dvh grid grid-cols-1 lg:grid-cols-12 bg-base-200 text-base-content">
-      {/* Left Luxury Brand Panel */}
-      <aside className="hidden lg:flex lg:col-span-5 flex-col justify-between bg-[#140c13] text-slate-100 p-10 border-r border-rose-500/10 relative overflow-hidden">
+    <div className="min-h-dvh flex flex-col lg:flex-row bg-[#FFF5F4] dark:bg-[#151219] text-gray-900 dark:text-gray-100 font-sans transition-colors duration-200">
+      {/* Left Gradient Brand Panel (Desktop 50%) */}
+      <aside className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-gradient-to-br from-[#E61E50] via-[#A81B5B] to-[#580B44] text-white p-12 lg:p-16 relative overflow-hidden">
+        {/* Soft glowing ambient orbs */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -top-24 -left-24 h-80 w-80 rounded-full bg-rose-500/20 blur-3xl"
+          className="pointer-events-none absolute -top-20 -left-20 h-96 w-96 rounded-full bg-white/10 blur-3xl"
         />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-10 right-10 h-80 w-80 rounded-full bg-rose-400/20 blur-3xl"
+        />
+
+        {/* Top Logo */}
         <div className="relative z-10 flex items-center justify-between">
-          <Logo light />
-          <Link to="/" className="text-xs text-rose-300 hover:text-white transition-colors">
+          <Link to="/" className="inline-flex items-center gap-2.5 group">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white shadow-md transition-transform group-hover:scale-105">
+              <Heart className="h-5 w-5 fill-[#E61E50] text-[#E61E50]" />
+            </span>
+            <span className="font-serif text-2xl font-bold tracking-tight text-white">
+              HeartLink<span className="text-rose-200">.</span>
+            </span>
+          </Link>
+          <Link
+            to="/"
+            className="text-xs font-medium text-rose-100/80 hover:text-white transition-colors"
+          >
             ← Back to Home
           </Link>
         </div>
 
-        <div className="relative z-10 space-y-6 my-auto py-8">
-          <div className="aspect-[16/10] w-full overflow-hidden rounded-2xl border border-rose-500/20 shadow-2xl">
-            <img
-              src="/heartlink-couple.jpg"
-              alt="HeartLink curated connection artwork"
-              fetchPriority="high"
-              decoding="async"
-              className="h-full w-full object-cover"
-            />
-          </div>
-          <div className="space-y-3">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-rose-300">
-              Authentic Connections
-            </p>
-            <h2 className="text-2xl font-semibold tracking-tight text-white leading-snug">
-              Real connections with people who truly match your energy.
-            </h2>
-            <p className="text-sm text-rose-200/70 leading-relaxed">
-              Curate your authentic dating profile, discover mutual sparks, and enjoy real-time conversations without unsolicited noise.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-3 pt-2 text-xs text-rose-100">
-            <div className="rounded-xl border border-rose-500/20 bg-rose-950/20 p-3 flex items-center gap-2">
-              <Shield className="h-4 w-4 text-rose-400 shrink-0" />
-              <span>Adults 18+ verified</span>
-            </div>
-            <div className="rounded-xl border border-rose-500/20 bg-rose-950/20 p-3 flex items-center gap-2">
-              <Heart className="h-4 w-4 text-rose-400 shrink-0" />
-              <span>Mutual match chat only</span>
-            </div>
-          </div>
+        {/* Center Editorial Headline matching 03-register.png */}
+        <div className="relative z-10 my-auto py-12 max-w-lg space-y-5">
+          <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-[1.12]">
+            {signup ? "Your next chapter starts here." : "Find someone who gets your vibe."}
+          </h1>
+          <p className="text-rose-100/90 text-base sm:text-lg leading-relaxed font-normal">
+            Meaningful connections start with a single spark. Join thousands of members meeting every day.
+          </p>
         </div>
 
-        <p className="relative z-10 text-xs text-slate-500">
-          Your password and email are never exposed publicly.
-        </p>
+        {/* Bottom Copyright */}
+        <div className="relative z-10 pt-4 text-xs text-rose-200/70">
+          &copy; {new Date().getFullYear()} HeartLink. All rights reserved.
+        </div>
       </aside>
 
-      {/* Right Auth Form Panel */}
-      <main className="lg:col-span-7 flex flex-col justify-center px-4 py-8 sm:px-8 lg:px-14">
-        <div className="mx-auto w-full max-w-md space-y-6">
-          <div className="flex items-center justify-between lg:hidden pb-2 border-b hl-subtle-divider">
-            <Logo />
-            <Link to="/" className="text-xs hl-muted-text hover:text-base-content">
+      {/* Right Form Panel (50%) */}
+      <main className="w-full lg:w-1/2 flex flex-col justify-center px-6 py-10 sm:px-12 md:px-16 lg:px-20 relative">
+        {/* Mobile header */}
+        <div className="flex items-center justify-between lg:hidden pb-6 mb-4 border-b border-rose-200/40 dark:border-rose-900/30">
+          <Logo />
+          <div className="flex items-center gap-3">
+            <ThemeToggle compact />
+            <Link to="/" className="text-xs text-gray-500 hover:text-gray-900 dark:text-gray-400">
               Home
             </Link>
           </div>
+        </div>
 
-          <FadeInView className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-widest hl-accent-text">
-              {signup ? "Create Account" : "Member Sign In"}
-            </p>
-            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-base-content">
-              {signup ? "Join HeartLink" : "Welcome back"}
-            </h1>
-            <p className="text-sm hl-muted-text">
+        {/* Desktop theme toggle & home link */}
+        <div className="hidden lg:flex items-center justify-end gap-3 absolute top-8 right-10">
+          <ThemeToggle compact />
+          <Link to="/" className="text-xs text-gray-500 hover:text-gray-900 dark:text-gray-400">
+            Home
+          </Link>
+        </div>
+
+        <div className="mx-auto w-full max-w-[440px] space-y-6">
+          {/* Title */}
+          <div className="space-y-2">
+            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white tracking-tight">
+              {signup ? "Create your account" : "Welcome back"}
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               {signup
-                ? "Set up your private member credentials in under a minute."
-                : "Sign in to access your dashboard, matches, and messages."}
+                ? "It takes less than a minute. Must be 18 or older."
+                : "Log in to see who liked you and pick up your conversations."}
             </p>
-          </FadeInView>
+          </div>
 
+          {/* Server Error Alert */}
           {serverError && (
-            <div role="alert" className="rounded-xl border border-error/30 bg-error/10 p-3.5 text-xs text-error space-y-2">
-              <div className="flex items-start gap-2.5">
-                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <div
+              role="alert"
+              className="rounded-2xl border border-rose-200 bg-rose-50 dark:bg-rose-950/40 dark:border-rose-800/40 p-4 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-3 shadow-sm"
+            >
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-[#E61E50]" />
+              <div className="flex-1 space-y-1.5">
                 <span>{serverError}</span>
+                {showResendAction && (
+                  <div>
+                    <button
+                      type="button"
+                      disabled={resending}
+                      onClick={handleResendVerification}
+                      className="font-semibold underline text-[#E61E50] cursor-pointer"
+                    >
+                      {resending ? "Resending..." : "Resend verification email"}
+                    </button>
+                  </div>
+                )}
               </div>
-              {showResendAction && (
-                <Button size="xs" variant="outline" loading={resending} onClick={handleResendVerification}>
-                  Resend verification email
-                </Button>
-              )}
             </div>
           )}
 
           {success && (
-            <div role="status" className="rounded-xl border border-success/30 bg-success/10 p-3.5 text-xs text-success flex items-start gap-2.5">
-              <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+            <div
+              role="status"
+              className="rounded-2xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/40 dark:border-emerald-800/40 p-4 text-xs text-emerald-800 dark:text-emerald-300 flex items-start gap-3 shadow-sm"
+            >
+              <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-emerald-600" />
               <span>{success}</span>
             </div>
           )}
 
-          <Card>
-            <form onSubmit={submit} noValidate className="space-y-4">
-              {signup && (
-                <Field
-                  id="signup-name"
-                  name="name"
-                  label="Full name"
-                  autoComplete="name"
-                  placeholder="Alex Morgan"
-                  maxLength={60}
-                  required
-                  value={form.name}
-                  onChange={update}
-                  error={errors.name}
+          {/* Continue with Google */}
+          {firebaseConfigured ? (
+            <button
+              type="button"
+              onClick={googleSubmit}
+              disabled={busy}
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-semibold shadow-sm hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                 />
-              )}
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                />
+              </svg>
+              <span>{signup ? "Sign up with Google" : "Continue with Google"}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled
+              title="Google authentication is not configured in this environment"
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 text-sm font-semibold opacity-60 cursor-not-allowed"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+              </svg>
+              <span>{signup ? "Sign up with Google" : "Continue with Google"}</span>
+            </button>
+          )}
 
-              <Field
-                id="auth-email"
-                name="email"
-                label="Email address"
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                maxLength={100}
-                required
-                value={form.email}
-                onChange={update}
-                error={errors.email}
-              />
+          {/* Divider */}
+          <div className="relative flex items-center justify-center">
+            <div className="w-full border-t border-gray-200 dark:border-gray-800" />
+            <span className="bg-[#FFF5F4] dark:bg-[#151219] px-3 text-[10px] sm:text-xs font-semibold tracking-wider text-gray-400 uppercase">
+              {signup ? "OR SIGN UP WITH E-MAIL" : "OR LOG IN WITH E-MAIL"}
+            </span>
+          </div>
 
-              {signup && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field
-                    id="signup-dob"
-                    name="dateOfBirth"
-                    label="Date of birth"
-                    type="date"
-                    autoComplete="bday"
-                    max={maxBirthDate}
-                    hint={!errors.dateOfBirth ? "Minimum age: 18 years" : ""}
-                    required
-                    value={form.dateOfBirth}
-                    onChange={update}
-                    error={errors.dateOfBirth}
-                  />
-                  <Select
-                    id="signup-gender"
-                    name="gender"
-                    label="Gender"
-                    required
-                    value={form.gender}
-                    onChange={update}
-                    error={errors.gender}
-                    options={[
-                      { value: "", label: "Select gender" },
-                      { value: "female", label: "Woman" },
-                      { value: "male", label: "Man" },
-                      { value: "non-binary", label: "Non-binary" },
-                      { value: "other", label: "Other" },
-                    ]}
-                  />
-                </div>
-              )}
-
+          {/* Form */}
+          <form onSubmit={submit} noValidate className="space-y-4">
+            {signup && (
               <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-base-content/90">Password</span>
-                  {!signup && (
-                    <Link to="/forgot-password" className="text-xs font-medium hl-accent-text hover:underline">
-                      Forgot password?
-                    </Link>
-                  )}
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                    <User className="h-4 w-4" />
+                  </span>
+                  <input
+                    id="signup-name"
+                    name="name"
+                    type="text"
+                    autoComplete="name"
+                    placeholder="First name"
+                    maxLength={60}
+                    required
+                    value={form.name}
+                    onChange={update}
+                    className={`w-full pl-10 pr-4 py-3 rounded-xl border bg-white dark:bg-gray-800/80 text-sm text-gray-900 dark:text-white placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#E61E50] focus:border-transparent transition-all ${
+                      errors.name ? "border-rose-400" : "border-gray-200 dark:border-gray-700"
+                    }`}
+                  />
                 </div>
-                <Field
+                {errors.name && <p className="text-[11px] text-rose-500 pl-1">{errors.name}</p>}
+              </div>
+            )}
+
+            {/* Email Field */}
+            <div className="space-y-1">
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                  <Mail className="h-4 w-4" />
+                </span>
+                <input
+                  id="auth-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder={signup ? "E-mail address" : "you@example.com"}
+                  maxLength={100}
+                  required
+                  value={form.email}
+                  onChange={update}
+                  className={`w-full pl-10 pr-4 py-3 rounded-xl border bg-white dark:bg-gray-800/80 text-sm text-gray-900 dark:text-white placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#E61E50] focus:border-transparent transition-all ${
+                    errors.email ? "border-rose-400" : "border-gray-200 dark:border-gray-700"
+                  }`}
+                />
+              </div>
+              {errors.email && <p className="text-[11px] text-rose-500 pl-1">{errors.email}</p>}
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-1">
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                  <Lock className="h-4 w-4" />
+                </span>
+                <input
                   id="auth-password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   autoComplete={signup ? "new-password" : "current-password"}
-                  placeholder={signup ? "Minimum 8 characters" : "Enter your password"}
+                  placeholder={signup ? "Password (8+ chars, letters & numbers)" : "Password"}
                   maxLength={72}
                   required
                   value={form.password}
                   onChange={update}
-                  error={errors.password}
+                  className={`w-full pl-10 pr-10 py-3 rounded-xl border bg-white dark:bg-gray-800/80 text-sm text-gray-900 dark:text-white placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#E61E50] focus:border-transparent transition-all ${
+                    errors.password ? "border-rose-400" : "border-gray-200 dark:border-gray-700"
+                  }`}
                 />
-                {signup && form.password && (
-                  <div className="space-y-1 pt-1">
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="hl-muted-text">Password strength:</span>
-                      <span className="font-semibold text-base-content">{pwStrength.label}</span>
-                    </div>
-                    <div className="w-full h-1.5 rounded-full bg-base-200 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-300 ${pwStrength.color}`}
-                        style={{ width: pwStrength.width }}
-                      />
-                    </div>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
+              {errors.password && <p className="text-[11px] text-rose-500 pl-1">{errors.password}</p>}
+            </div>
 
-              {signup && (
-                <Field
-                  id="signup-confirm"
-                  name="confirmPassword"
-                  label="Confirm password"
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder="Re-enter password"
-                  maxLength={72}
-                  required
-                  value={form.confirmPassword}
-                  onChange={update}
-                  error={errors.confirmPassword}
-                />
-              )}
+            {signup && (
+              <>
+                {/* Date of Birth Field */}
+                <div className="space-y-1">
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                      <Calendar className="h-4 w-4" />
+                    </span>
+                    <input
+                      id="signup-dob"
+                      name="dateOfBirth"
+                      type="date"
+                      autoComplete="bday"
+                      max={maxBirthDate}
+                      required
+                      value={form.dateOfBirth}
+                      onChange={update}
+                      className={`w-full pl-10 pr-4 py-3 rounded-xl border bg-white dark:bg-gray-800/80 text-sm text-gray-900 dark:text-white placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#E61E50] focus:border-transparent transition-all ${
+                        errors.dateOfBirth ? "border-rose-400" : "border-gray-200 dark:border-gray-700"
+                      }`}
+                    />
+                  </div>
+                  {errors.dateOfBirth && <p className="text-[11px] text-rose-500 pl-1">{errors.dateOfBirth}</p>}
+                </div>
 
-              {signup && (
+                {/* Gender Segmented Pills (Man | Woman | Other) */}
                 <div className="space-y-1 pt-1">
-                  <label htmlFor="terms-accepted" className="flex items-start gap-2.5 text-xs hl-muted-text cursor-pointer">
+                  <div className="grid grid-cols-3 gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl border border-gray-200/80 dark:border-gray-700">
+                    {[
+                      { value: "male", label: "Man" },
+                      { value: "female", label: "Woman" },
+                      { value: "other", label: "Other" },
+                    ].map((g) => (
+                      <button
+                        key={g.value}
+                        type="button"
+                        onClick={() => {
+                          setForm((prev) => ({ ...prev, gender: g.value }));
+                          if (errors.gender) setErrors((prev) => ({ ...prev, gender: undefined }));
+                        }}
+                        className={`py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          form.gender === g.value
+                            ? "bg-[#E61E50] text-white shadow-sm"
+                            : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                        }`}
+                      >
+                        {g.label}
+                      </button>
+                    ))}
+                  </div>
+                  {errors.gender && <p className="text-[11px] text-rose-500 pl-1">{errors.gender}</p>}
+                </div>
+
+                {/* Terms Acceptance */}
+                <div className="space-y-1 pt-1">
+                  <label htmlFor="terms-accepted" className="flex items-start gap-2.5 text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
                     <input
                       id="terms-accepted"
                       type="checkbox"
                       name="termsAccepted"
                       checked={form.termsAccepted}
                       onChange={update}
-                      className="checkbox checkbox-primary checkbox-sm mt-0.5 rounded"
+                      className="rounded border-gray-300 text-[#E61E50] focus:ring-[#E61E50] h-3.5 w-3.5 mt-0.5"
                     />
                     <span>
                       I confirm I am 18+ and accept the{" "}
-                      <Link to="/terms" className="hl-accent-text underline">
+                      <Link to="/terms" className="text-[#E61E50] font-semibold underline">
                         Terms of Service
                       </Link>{" "}
                       and{" "}
-                      <Link to="/privacy" className="hl-accent-text underline">
+                      <Link to="/privacy" className="text-[#E61E50] font-semibold underline">
                         Privacy Policy
                       </Link>
                       .
                     </span>
                   </label>
                   {errors.termsAccepted && (
-                    <p role="alert" className="text-xs text-error">
-                      {errors.termsAccepted}
-                    </p>
+                    <p className="text-[11px] text-rose-500 pl-1">{errors.termsAccepted}</p>
                   )}
                 </div>
-              )}
-
-              <Button
-                type="submit"
-                fullWidth
-                size="lg"
-                loading={busy}
-                rightIcon={<ArrowRight className="h-4 w-4" />}
-              >
-                {signup ? "Create account" : "Sign in"}
-              </Button>
-            </form>
-
-            {firebaseConfigured && (
-              <>
-                <div className="divider text-[11px] uppercase hl-muted-text my-4">or</div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  fullWidth
-                  disabled={busy}
-                  onClick={googleSubmit}
-                >
-                  <span className="font-bold text-indigo-500">G</span>
-                  <span>{signup ? "Continue with Google" : "Sign in with Google"}</span>
-                </Button>
               </>
             )}
-          </Card>
 
-          <div className="text-center text-xs hl-muted-text px-1">
+            {/* Submit Pill Button */}
+            <button
+              type="submit"
+              disabled={busy}
+              className="w-full mt-2 py-3.5 px-6 rounded-full bg-[#E61E50] hover:bg-[#D01845] active:bg-[#B9143C] text-white text-sm font-semibold shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              {busy ? "Please wait..." : signup ? "Create account" : "Sign in"}
+            </button>
+          </form>
+
+          {/* Bottom Switch Link */}
+          <div className="text-center pt-1 text-xs text-gray-600 dark:text-gray-400">
             <p>
-              {signup ? "Already have an account?" : "New to HeartLink?"}{" "}
-              <Link to={signup ? "/login" : "/signup"} className="font-semibold hl-accent-text hover:underline">
-                {signup ? "Sign in" : "Create account"}
+              {signup ? "Already a member? " : "New to HeartLink? "}
+              <Link to={signup ? "/login" : "/signup"} className="font-semibold text-[#E61E50] hover:underline">
+                {signup ? "Log in" : "Create an account"}
               </Link>
             </p>
           </div>

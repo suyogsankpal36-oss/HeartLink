@@ -541,201 +541,204 @@ export function AppShell({ title = "", subtitle = "", actions = null, fullHeight
     </div>
   );
 
+  const unreadAlerts = Number(stats?.unreadNotificationsCount || 0);
+  const unreadMessages = Number(stats?.unreadMessagesCount || 0);
+
   return (
-    <div className="min-h-dvh flex bg-base-200 text-base-content">
-      {/* Desktop Sidebar */}
-      <aside
-        aria-label="Workspace sidebar"
-        className={`hidden md:flex flex-col shrink-0 border-r hl-subtle-divider bg-base-100 sticky top-0 h-dvh transition-all duration-200 ${
-          collapsed ? "w-[72px]" : "w-64"
-        }`}
-      >
-        <div className={`h-16 flex items-center border-b hl-subtle-divider px-4 ${collapsed ? "justify-center" : "justify-between"}`}>
-          <Logo to="/dashboard" compact={collapsed} />
+    <div className="min-h-dvh flex flex-col bg-[#FFF5F4] dark:bg-[#151219] text-gray-900 dark:text-gray-100 font-sans transition-colors duration-200">
+      {/* Network offline banner */}
+      {!backendAvailable && (
+        <div
+          role="alert"
+          className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2 text-xs flex items-center justify-between gap-2 text-amber-900 dark:text-amber-200"
+        >
+          <span className="font-medium">
+            API connection interrupted. Some updates may pause until connection restores.
+          </span>
+          <Button size="xs" variant="outline" onClick={checkConnection}>
+            Retry
+          </Button>
         </div>
+      )}
 
-        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
-          {renderNavSection("Dating & Matches", primaryNav, collapsed)}
-          {renderNavSection("My Profile & Preferences", accountNav, collapsed)}
-          {staffNav.length > 0 && renderNavSection("Safety & Moderation", staffNav, collapsed)}
-        </div>
-
-        <div className="border-t hl-subtle-divider p-3">
-          <Link
-            to="/profile/edit"
-            className={`flex items-center gap-2.5 rounded-lg p-2 hover:bg-base-200 transition-colors ${
-              collapsed ? "justify-center" : ""
-            }`}
-          >
-            <Avatar
-              src={user?.profilePhoto || user?.photos?.[0]}
-              name={user?.name}
-              size="sm"
-              online={isConnected}
-            />
-            {!collapsed && (
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-base-content truncate">{user?.name || "Member"}</p>
-                <p className="text-[11px] hl-muted-text truncate">{user?.city || user?.email}</p>
-              </div>
-            )}
-          </Link>
-        </div>
-      </aside>
-
-      {/* Main Column */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {!backendAvailable && (
-          <div
-            role="alert"
-            className="bg-warning/15 border-b border-warning/30 px-4 py-2 text-xs flex items-center justify-between gap-2"
-          >
-            <span className="font-medium text-base-content">
-              API connection interrupted. Some updates may pause until connection restores.
-            </span>
-            <Button size="xs" variant="outline" onClick={checkConnection}>
-              Retry
-            </Button>
-          </div>
-        )}
-
-        {/* Topbar */}
-        <header className="sticky top-0 z-30 h-16 border-b hl-subtle-divider bg-base-100/85 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+      {/* Clean Top Navigation Bar matching reference designs (06-discover.png, 09-matches.png) */}
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#1B1720]/95 backdrop-blur-md border-b border-rose-100/70 dark:border-rose-950/40 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          {/* Logo on Left */}
+          <div className="flex items-center gap-3">
             <IconButton
               label="Open navigation drawer"
               variant="ghost"
               size="sm"
-              className="md:hidden"
+              className="md:hidden text-gray-700 dark:text-gray-200"
               onClick={() => setMobileMenuOpen(true)}
             >
               <Menu className="h-5 w-5" strokeWidth={1.75} />
             </IconButton>
-
-            <IconButton
-              label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              variant="ghost"
-              size="sm"
-              className="hidden md:inline-flex"
-              onClick={toggleCollapsed}
-            >
-              {collapsed ? (
-                <PanelLeftOpen className="h-4 w-4" strokeWidth={1.75} />
-              ) : (
-                <PanelLeftClose className="h-4 w-4" strokeWidth={1.75} />
-              )}
-            </IconButton>
-
-            <div className="relative hidden sm:block w-full max-w-xs lg:max-w-sm">
-              <SearchBar
-                value={quickQuery}
-                onChange={(e) => setQuickQuery(e.target.value)}
-                onClear={() => setQuickQuery("")}
-                placeholder="Jump to discover, matches, chats..."
-                label="Quick jump navigation"
-              />
-              {filteredQuickJump.length > 0 && (
-                <div className="absolute left-0 right-0 top-11 z-50 rounded-xl border border-base-300 bg-base-100 p-1.5 shadow-xl">
-                  {filteredQuickJump.map((item) => (
-                    <button
-                      key={item.to}
-                      type="button"
-                      onClick={() => {
-                        setQuickQuery("");
-                        navigate(item.to);
-                      }}
-                      className="w-full text-left rounded-lg px-3 py-2 text-xs font-medium text-base-content hover:bg-base-200 flex items-center justify-between cursor-pointer"
-                    >
-                      <span>{item.label}</span>
-                      <span className="hl-muted-text text-[11px]">{item.to}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <Logo to="/discover" />
           </div>
 
-          <div className="flex items-center gap-2">
-            {!isConnected && (
-              <Badge tone="warning" className="hidden sm:inline-flex">
-                <WifiOff className="h-3 w-3" />
-                Live offline
-              </Badge>
-            )}
+          {/* Centered Navigation Pills (Desktop) */}
+          <nav aria-label="Main Navigation" className="hidden md:flex items-center gap-1 bg-white/80 dark:bg-gray-800/80 p-1 rounded-full border border-rose-100/70 dark:border-gray-700 shadow-xs">
+            <NavLink
+              to="/discover"
+              className={({ isActive }) =>
+                `flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  isActive
+                    ? "bg-[#E61E50] text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-rose-50/50 dark:hover:bg-gray-700/50"
+                }`
+              }
+            >
+              <Compass className="h-3.5 w-3.5" />
+              <span>Discover</span>
+            </NavLink>
 
+            <NavLink
+              to="/matches"
+              className={({ isActive }) =>
+                `flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  isActive
+                    ? "bg-[#E61E50] text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-rose-50/50 dark:hover:bg-gray-700/50"
+                }`
+              }
+            >
+              <Heart className="h-3.5 w-3.5" />
+              <span>Matches</span>
+              {stats?.matchesCount > 0 && (
+                <span className="ml-1 rounded-full bg-[#E61E50] text-white text-[10px] px-1.5 py-0.5 leading-none">
+                  {stats.matchesCount}
+                </span>
+              )}
+            </NavLink>
+
+            <NavLink
+              to="/messages"
+              className={({ isActive }) =>
+                `flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  isActive
+                    ? "bg-[#E61E50] text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-rose-50/50 dark:hover:bg-gray-700/50"
+                }`
+              }
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              <span>Messages</span>
+              {unreadMessages > 0 && (
+                <span className="ml-1 rounded-full bg-[#E61E50] text-white text-[10px] px-1.5 py-0.5 leading-none">
+                  {unreadMessages}
+                </span>
+              )}
+            </NavLink>
+
+            <NavLink
+              to="/notifications"
+              className={({ isActive }) =>
+                `flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  isActive
+                    ? "bg-[#E61E50] text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-rose-50/50 dark:hover:bg-gray-700/50"
+                }`
+              }
+            >
+              <Bell className="h-3.5 w-3.5" />
+              <span>Alerts</span>
+              {unreadAlerts > 0 && (
+                <span className="ml-1 rounded-full bg-[#E61E50] text-white text-[10px] px-1.5 py-0.5 leading-none">
+                  {unreadAlerts}
+                </span>
+              )}
+            </NavLink>
+          </nav>
+
+          {/* Right Controls: Dark Mode Toggle + Profile Avatar Menu */}
+          <div className="flex items-center gap-2 sm:gap-3">
             <ThemeToggle compact />
-            <NotificationPopover />
 
             <Dropdown
               align="right"
-              widthClass="w-60"
+              widthClass="w-64"
               trigger={({ toggle }) => (
                 <button
                   type="button"
                   onClick={toggle}
                   aria-label="User account menu"
-                  className="inline-flex items-center gap-2 rounded-lg border border-base-300/80 bg-base-100 px-2 py-1 hover:bg-base-200 transition-colors cursor-pointer"
+                  className="flex items-center gap-2 rounded-full border border-rose-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-1 hover:ring-2 hover:ring-[#E61E50]/20 transition-all cursor-pointer"
                 >
-                  <Avatar src={user?.profilePhoto || user?.photos?.[0]} name={user?.name} size="xs" />
-                  <span className="hidden lg:inline text-xs font-medium text-base-content max-w-28 truncate">
+                  <Avatar
+                    src={user?.profilePhoto || user?.photos?.[0]}
+                    name={user?.name}
+                    size="xs"
+                    online={isConnected}
+                  />
+                  <span className="hidden sm:inline text-xs font-semibold text-gray-800 dark:text-gray-200 pr-2 max-w-28 truncate">
                     {user?.name}
                   </span>
                 </button>
               )}
             >
               {({ close }) => (
-                <div className="flex flex-col text-xs">
-                  <div className="px-3 py-2.5 border-b hl-subtle-divider space-y-1">
-                    <p className="font-semibold text-base-content truncate">{user?.name}</p>
-                    <p className="hl-muted-text truncate">{user?.email}</p>
+                <div className="flex flex-col text-xs p-1.5">
+                  <div className="px-3 py-2.5 border-b border-gray-100 dark:border-gray-800 space-y-1">
+                    <p className="font-bold text-gray-900 dark:text-white truncate">{user?.name}</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-[11px] truncate">{user?.email}</p>
                     <RoleBadge role={role} />
                   </div>
                   <div className="py-1">
                     <Link
-                      to="/dashboard"
-                      onClick={close}
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-base-200 text-base-content"
-                    >
-                      <LayoutDashboard className="h-3.5 w-3.5" />
-                      Dashboard
-                    </Link>
-                    <Link
                       to="/profile/edit"
                       onClick={close}
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-base-200 text-base-content"
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-rose-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-medium"
                     >
-                      <UserCheck className="h-3.5 w-3.5" />
-                      Edit Profile
+                      <UserCheck className="h-4 w-4 text-[#E61E50]" />
+                      My Profile
                     </Link>
                     <Link
                       to="/settings"
                       onClick={close}
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-base-200 text-base-content"
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-rose-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-medium"
                     >
-                      <Settings className="h-3.5 w-3.5" />
-                      Account Settings
+                      <Settings className="h-4 w-4 text-gray-400" />
+                      Settings
+                    </Link>
+                    <Link
+                      to="/likes"
+                      onClick={close}
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-rose-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-medium"
+                    >
+                      <Heart className="h-4 w-4 text-[#E61E50]" />
+                      Liked You ({stats?.likesReceivedCount || 0})
+                    </Link>
+                    <Link
+                      to="/premium"
+                      onClick={close}
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-rose-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-medium"
+                    >
+                      <Crown className="h-4 w-4 text-amber-500" />
+                      HeartLink Premium
                     </Link>
                     {isStaff && (
                       <Link
                         to={isAdmin ? "/admin/dashboard" : "/admin/reports"}
                         onClick={close}
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-base-200 hl-accent-text font-medium"
+                        className="flex items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-rose-50 dark:hover:bg-gray-800 text-[#E61E50] font-semibold"
                       >
-                        <Shield className="h-3.5 w-3.5" />
+                        <Shield className="h-4 w-4" />
                         {isAdmin ? "Admin Console" : "Moderation Queue"}
                       </Link>
                     )}
                   </div>
-                  <div className="border-t hl-subtle-divider pt-1">
+                  <div className="border-t border-gray-100 dark:border-gray-800 pt-1">
                     <button
                       type="button"
                       onClick={() => {
                         close();
                         logout();
                       }}
-                      className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left text-error hover:bg-error/10 cursor-pointer"
+                      className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer font-medium"
                     >
-                      <LogOut className="h-3.5 w-3.5" />
+                      <LogOut className="h-4 w-4" />
                       Sign out
                     </button>
                   </div>
@@ -743,42 +746,31 @@ export function AppShell({ title = "", subtitle = "", actions = null, fullHeight
               )}
             </Dropdown>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* Page Content */}
-        <main
-          className={
-            fullHeight
-              ? "flex-1 flex flex-col min-h-0 pb-16 md:pb-0"
-              : "flex-1 px-4 py-6 sm:px-6 lg:px-8 max-w-7xl w-full mx-auto pb-24 md:pb-10"
-          }
-        >
-          {(title || actions) && !fullHeight && (
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-5 mb-6 border-b hl-subtle-divider">
-              <div>
-                <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-base-content">
-                  {title}
-                </h1>
-                {subtitle && <p className="text-sm hl-muted-text mt-1">{subtitle}</p>}
-              </div>
-              {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
-            </div>
-          )}
-          {children}
-        </main>
-      </div>
+      {/* Main Content Area centered on Warm Blush Canvas */}
+      <main
+        className={
+          fullHeight
+            ? "flex-1 flex flex-col min-h-0 pb-16 md:pb-6"
+            : "flex-1 px-4 py-8 sm:px-6 lg:px-8 max-w-6xl w-full mx-auto pb-24 md:pb-12"
+        }
+      >
+        {children}
+      </main>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Floating Navigation Bar */}
       <nav
         aria-label="Mobile quick navigation"
-        className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t hl-subtle-divider bg-base-100/95 backdrop-blur-md px-2 py-1.5 flex items-center justify-around shadow-lg"
+        className="md:hidden fixed bottom-3 inset-x-4 z-40 rounded-full border border-rose-200/80 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md px-3 py-2 flex items-center justify-around shadow-xl"
       >
         {[
           { label: "Discover", to: "/discover", icon: Compass },
-          { label: "Likes", to: "/likes", icon: Heart, badge: stats?.likesReceivedCount },
-          { label: "Matches", to: "/matches", icon: Users, badge: stats?.matchesCount },
-          { label: "Chat", to: "/messages", icon: MessageSquare, badge: stats?.unreadNotificationsCount },
-          { label: "Profile", to: "/dashboard", icon: UserCheck },
+          { label: "Matches", to: "/matches", icon: Heart, badge: stats?.matchesCount },
+          { label: "Chat", to: "/messages", icon: MessageSquare, badge: unreadMessages },
+          { label: "Alerts", to: "/notifications", icon: Bell, badge: unreadAlerts },
+          { label: "Profile", to: "/profile/edit", icon: UserCheck },
         ].map((item) => {
           const IconComp = item.icon;
           return (
@@ -786,36 +778,36 @@ export function AppShell({ title = "", subtitle = "", actions = null, fullHeight
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `relative flex flex-col items-center gap-0.5 rounded-xl px-3 py-1 text-[11px] font-medium transition-colors ${
-                  isActive ? "text-[#F45B83] font-semibold" : "hl-muted-text hover:text-base-content"
+                `relative flex flex-col items-center gap-0.5 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors ${
+                  isActive ? "text-[#E61E50]" : "text-gray-500 dark:text-gray-400 hover:text-gray-900"
                 }`
               }
             >
-              <IconComp className="h-5 w-5" strokeWidth={1.8} />
+              <IconComp className="h-4 w-4" strokeWidth={2} />
               <span>{item.label}</span>
               {Boolean(item.badge && item.badge > 0) && (
-                <span className="absolute top-0 right-2 h-2 w-2 rounded-full bg-[#F45B83] ring-2 ring-base-100" />
+                <span className="absolute top-0 right-1 h-2 w-2 rounded-full bg-[#E61E50] ring-2 ring-white dark:ring-gray-900" />
               )}
             </NavLink>
           );
         })}
       </nav>
 
-      {/* Mobile Navigation Drawer */}
+      {/* Mobile Drawer */}
       <Drawer
         open={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
-        title="HeartLink Menu"
+        title="HeartLink"
         subtitle={user?.email}
         side="left"
         widthClass="max-w-xs"
       >
-        <div className="space-y-4">
+        <div className="space-y-4 pt-2">
           {renderNavSection("Dating & Matches", primaryNav, false, () => setMobileMenuOpen(false))}
-          {renderNavSection("My Profile & Preferences", accountNav, false, () => setMobileMenuOpen(false))}
+          {renderNavSection("My Profile & Settings", accountNav, false, () => setMobileMenuOpen(false))}
           {staffNav.length > 0 && renderNavSection("Safety & Moderation", staffNav, false, () => setMobileMenuOpen(false))}
-          <div className="border-t hl-subtle-divider pt-3 flex items-center justify-between px-2">
-            <span className="text-xs font-medium hl-muted-text">Theme</span>
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-3 flex items-center justify-between px-2">
+            <span className="text-xs font-medium text-gray-500">Theme</span>
             <ThemeToggle showSystem />
           </div>
           <Button

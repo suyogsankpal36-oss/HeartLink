@@ -1,1 +1,3 @@
-/*    /index.html   200
+/api/*  https://heartlink-api-36vt.onrender.com/api/:splat  200
+/auth/* https://heartlink-api-36vt.onrender.com/auth/:splat 200
+/*      /index.html                                         200
